@@ -13,6 +13,7 @@ public class RHttpConf extends ClientConf<RHttpConf> {
         CONNECTION_IDLE_TIMEOUT("connection.idle.timeout", "10m"), // 最多闲置时间10分钟
         SOCKET_TIMEOUT("connection.socket.timeout", "5m"), // socket超时时间为5分钟
 
+        CLIENT_EXECUTOR_NUMS("client.executer.num", 10), // 每个client内部持有可执行的线程数量
         JOB_INITIAL_POLL_INTERVAL("job.initial-poll-interval", "100ms"),
         JOB_MAX_POLL_INTERVAL("job.max-poll-interval", "5s");
 
