@@ -28,12 +28,12 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
     /**
      * 用来维护一个session，对存活状态的session 发起请求
       */
-    private final ConcurrentHashMap<Integer, ClienSessionStore> store = new ConcurrentHashMap<>();
-
+//    private final ConcurrentHashMap<Integer, RHttpClientSessionStore> store = new ConcurrentHashMap<>();
+    private final RHttpClientSessionStoreManager storeManager;
     /**
      * 工厂类创建实例对象，并且初始化连接对象
      * 内部之维护一个connection
-     *
+     * 通过似乎创建一个manager用来管理存储所需要的url
      * @param uri
      * @param rHttpConf
      */
@@ -44,14 +44,15 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
         this.rHttpConf = rHttpConf;
 
         this.conn = new RLivyConnection(uri, rHttpConf);
-
+        RHttpClientSessionStoreManager manager = null;
         try {
             if(m.matches()){
                 int id = Integer.valueOf(m.group(1));
+                URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
                 HttpMessages.SessionInfo sessionInfo = this.conn.post(null, HttpMessages.SessionInfo.class, MyMessage.SESSIONRECONNECT, m.group(1));
                 String state = sessionInfo.state;
-                ClienSessionStore sessionStore = new ClienSessionStore(state);
-                this.store.put(id, sessionStore);
+                RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,state, uri_no_path);
+                manager = new RHttpClientSessionStoreManager(sessionStore);
             } else {
                 Map<String,String> conf = null;
                 // 获取的是 sparkr/spark/pyspark
@@ -59,13 +60,17 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
                 MyMessage.CreateClientWithTypeEntity createClientWithTypeEntity = new MyMessage.CreateClientWithTypeEntity(conf, kind);
                 HttpMessages.SessionInfo result = this.conn.post(createClientWithTypeEntity, HttpMessages.SessionInfo.class, uri.toString());
                 int id = result.id;
-                ClienSessionStore sessionStore = new ClienSessionStore();
-                this.store.put(id, sessionStore);
+                String state = result.state;
+                URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
+                RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,state, uri_no_path);
+                manager = new RHttpClientSessionStoreManager(sessionStore);
             }
         } catch (IOException e) {
             propagateErr(e);
         } catch (URISyntaxException e) {
             propagateErr(e);
+        }finally {
+            this.storeManager = manager;
         }
 //        this.executors = Executors.newFixedThreadPool(rHttpConf.getInt(RHttpConf.Entry.CLIENT_EXECUTOR_NUMS));
         int corePoolSize = rHttpConf.getInt(RHttpConf.Entry.CLIENT_EXECUTOR_NUMS); // 10 个线程
@@ -97,37 +102,43 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
 //    public <T> JobHandle<T> submit(Job<T> job) {
 //        return null;
 //    }
-
+    @Deprecated
     @Override
     public <T> JobHandle<T> submit(Job<T> job) {
         return null;
     }
 
+    @Deprecated
     @Override
     public <T> Future<T> run(Job<T> job) {
         return null;
     }
 
+    @Deprecated
     @Override
     public void stop(boolean b) {
 
     }
 
+    @Deprecated
     @Override
     public Future<?> uploadJar(File file) {
         return null;
     }
 
+    @Deprecated
     @Override
     public Future<?> addJar(URI uri) {
         return null;
     }
 
+    @Deprecated
     @Override
     public Future<?> uploadFile(File file) {
         return null;
     }
 
+    @Deprecated
     @Override
     public Future<?> addFile(URI uri) {
         return null;
@@ -135,13 +146,14 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
 
     /**
      * 其他地方不用传递，这个是最重要的提交片段的地方
+     * 返回一个句柄给用户，用户可以对其进行监听使用，方便回调
      * @param code 代码为
      */
     @Override
-    public Future submitcode(String code) throws IOException, URISyntaxException {
-        MyMessage.ResultWithCode postObject = new MyMessage.ResultWithCode(-1, code, null, 0.0f, null);
-        RequestJobHandlerImpl<MyMessage.ResultWithCode> handler = new RequestJobHandlerImpl<>(conn, executors, store);
-        handler.start(code, postObject);
+    public JobHandle submitcode(String code) throws IOException, URISyntaxException {
+        HttpMessages.ClientMessage postObject = new MyMessage.ResultWithCode(-1, code, null, 0.0f, null);
+        RequestJobHandlerImpl<MyMessage.ResultWithCode> handler = new RequestJobHandlerImpl<>(conn, executors, storeManager,rHttpConf);
+        handler.start(postObject);
         return handler;
     }
     private RuntimeException propagateErr(Exception err){
@@ -153,7 +165,7 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
     }
 
     // only for testing
-    public ConcurrentHashMap<Integer, ClienSessionStore> getStore() {
-        return store;
+    public RHttpClientSessionStoreManager getStoreManager() {
+        return storeManager;
     }
 }

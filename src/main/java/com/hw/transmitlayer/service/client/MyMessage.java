@@ -23,6 +23,21 @@ public class MyMessage extends HttpMessages {
 
     // GET请求获取id的地址 'http://192.168.40.179:8998/sessions/7/statements/0'
     public final  static String CODESTATEMENTFORMAT_GET = SESSIONINIT + "/%s/" + "statements" + "/%s";
+
+    public enum SessionState{
+        NOTSTARTED("not_started"),STARTING("starting"),RECOVERING("recovering"),
+        IDLE("idle"),RUNNING("running"),BUSY("busy"),SHUTTINGDOWN("shuttingdown")
+        ,KILL("kill"),ERROR("error"),DEAD("dead");
+        private final String key;
+
+        SessionState(String key) {
+            this.key = key;
+        }
+        public String getKey() {
+            return key;
+        }
+    }
+
     /**
      * 创建远程session时需要提供的object
      *
@@ -47,6 +62,10 @@ public class MyMessage extends HttpMessages {
         }
     }
 
+    public static class PostWithCode implements ClientMessage {
+
+    }
+
     /**
      * http://192.168.40.179:8998/sessions/0/statements post 返回的结果
      * http://192.168.40.179:8998/sessions/0/statements/0  get返回的结果
@@ -65,5 +84,6 @@ public class MyMessage extends HttpMessages {
             this.progress = progress;
             this.state = state;
         }
+
     }
 }

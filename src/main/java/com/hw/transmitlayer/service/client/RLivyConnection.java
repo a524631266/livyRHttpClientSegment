@@ -21,7 +21,8 @@ import java.net.URISyntaxException;
 
 /**
  * 抽象出一个Connetion对象，这里用来维护与后端Interact进行交互的连接池
- * 灵感来自netty group and pipeline以及connecton
+ * 灵感来自netty group and pipeline以及connecton\
+ * 目前 connection操作分两种，一种是一次连接，另一种是多次轮询方式连接方式获取结果
  */
 public class RLivyConnection {
 //    private
@@ -45,7 +46,7 @@ public class RLivyConnection {
         this.mapper = new ObjectMapper();
     }
 
-    public <V> V post(Object body,  Class<V> returnCLass, String uri, String... uriParams) throws IOException, URISyntaxException {
+    public <V> V post(Object body,  Class<V> returnCLass, String uri, Object... uriParams) throws IOException, URISyntaxException {
         HttpPost httpPost = new HttpPost();
         if(body !=null) {
             byte[] bodyBytes = mapper.writeValueAsBytes(body);
@@ -54,15 +55,15 @@ public class RLivyConnection {
         return this.sendJsonRequest(httpPost, returnCLass, uri, uriParams);
     }
 
-    private <V> V sendJsonRequest(HttpRequestBase req, Class<V> returnCLass, String uri, String... uriParams) throws IOException, URISyntaxException {
+    private <V> V sendJsonRequest(HttpRequestBase req, Class<V> returnCLass, String uri, Object... uriParams) throws IOException, URISyntaxException {
         req.setHeader(HttpHeaders.ACCEPT, Application_JSON);
         req.setHeader(HttpHeaders.CONTENT_TYPE, Application_JSON);
         req.setHeader(HttpHeaders.CONTENT_ENCODING, "UTF-8");
         return this.sendRequest(req, returnCLass, uri, uriParams);
     }
 
-    private <V> V sendRequest(HttpRequestBase req, Class<V> returnCLass, String uri, String... uriParams) throws URISyntaxException, IOException {
-
+    private <V> V sendRequest(HttpRequestBase req, Class<V> returnCLass, String uri, Object... uriParams) throws URISyntaxException, IOException {
+        // 请求的是只关注最新当前最新的内容就可以了
         req.setURI(new URI(server.getScheme(),null,
                 server.getHost(),
                 server.getPort(),
@@ -88,4 +89,7 @@ public class RLivyConnection {
         }
     }
 
+    public <V> V get(Class<V> returnClass, String uri,Object... uriParams) throws IOException, URISyntaxException {
+            return sendJsonRequest(null, returnClass, uri, uriParams);
+    }
 }
