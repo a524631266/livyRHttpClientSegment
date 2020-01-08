@@ -32,4 +32,12 @@ public class RHttpClientSessionStore {
 //        INIT,RUNNGING,SHUTDOWN,SECCUCESS;
 //    }
 
+    @Override
+    public String toString() {
+        return "RHttpClientSessionStore{" +
+                "state='" + state + '\'' +
+                ", sessionid=" + sessionid +
+                ", uri_no_path=" + uri_no_path +
+                '}';
+    }
 }

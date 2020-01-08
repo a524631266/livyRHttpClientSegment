@@ -19,7 +19,11 @@ public class RHttpConf extends ClientConf<RHttpConf> {
         JOB_INITIAL_POLL_INTERVAL("job.initial-poll-interval", "100ms"), // 默认为每100ms获取一次
         JOB_MAX_POLL_INTERVAL("job.max-poll-interval", "5s"), // 每次轮询，以2倍的速度增长
         CONNECTION_SESSION_KIND("connection.session.kind", "shared"),
-        CONNECTION_AUTOCONNECT_INTERVAL("connection.autoconnect.interval", "1m");
+        CONNECTION_AUTOCONNECT_INTERVAL("connection.autoconnect.interval", "1m"),
+        CONNECTION_SESSION_CORE_SIZE("connection.session.core.size", 1), // 该客户端中最少要保留的session,远程的spark进程数量
+        CONNECTION_SESSION_MAX_SIZE("connection.session.max.size", 10) // 该客户端中最多持有的shell数量，防止使用过度
+        ;
+
 
         private final String key;
         private final Object dflt;

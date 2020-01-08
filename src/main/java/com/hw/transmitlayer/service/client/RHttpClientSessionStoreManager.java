@@ -4,10 +4,10 @@ import org.apache.livy.sessions.SessionState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Vector;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -29,7 +29,8 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
 
     private final AtomicInteger readCount = new AtomicInteger(0) ; // 测试用
 
-
+    private final int sessionCoreSize ;
+    private final int sessionMaxSize ;
     private boolean test = false;
 
 
@@ -39,6 +40,8 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     public RHttpClientSessionStoreManager( RHttpClientSessionStore storeList,RHttpConf rHttpConf, RLivyConnection connection, Boolean test) {
         super(rHttpConf, connection);
         this.test = test;
+        this.sessionCoreSize = rHttpConf.getInt(RHttpConf.Entry.CONNECTION_SESSION_CORE_SIZE);
+        this.sessionMaxSize = rHttpConf.getInt(RHttpConf.Entry.CONNECTION_SESSION_MAX_SIZE);
         register(storeList);
     }
 
@@ -56,7 +59,18 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         }
     }
 
+    public void remove(RHttpClientSessionStore store) {
+        LOCK.lock();
+        try {
+        }finally {
+            LOCK.unlock();
+        }
+    }
 
+    /**
+     * 获取一个可用的session 用来提供client使用
+     * @return
+     */
     public RHttpClientSessionStore getAvailableStore() {
         RHttpClientSessionStore store = null;
         readCount.getAndIncrement();
@@ -75,6 +89,7 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
                     break;
                 }
                 LOG.info("循环获取读取的任务列表");
+                // 当前默认最多1秒中，重新唤醒
                 done.await(1, TimeUnit.SECONDS);
             }
         } catch (InterruptedException e) {
@@ -85,18 +100,21 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         }
     }
 
-    public int storeSize(){
-        return storeList.size();
-    }
+//    public int storeSize(){
+//
+//        return storeList.size();
+//    }
 
 
     private void logCount() {
-        int writecount = writeCount.get();
-        int readcount = readCount.get();
-        LOG.info("当前 读次数"+ readcount +": ===== 写次数" + writecount );
+        int writeCountL = writeCount.get();
+        int readCountL = readCount.get();
+        LOG.info("当前 读次数"+ readCountL +": ===== 写次数" + writeCountL );
     }
 
-
+    /**
+     * 周期性更新storeList
+     */
     @Override
     public void updateSessionState() {
         logCount();
@@ -105,8 +123,10 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
             LOG.info("开始执行后台任务：" + test);
             for (RHttpClientSessionStore store : storeList) {
                 if(test){
+                    // 当前测试使用
                     callMockRemoteAndUpdateState(store);
                 } else {
+                    // 远程连接
                     callRemoteAndUpdateState(store);
                 }
             }
@@ -117,18 +137,55 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
 
     }
 
+    @Override
+    protected void removeUnAvailableSession() {
+        LOCK.lock();
+        try{
+            LOG.info("开始清理session：" + test);
+            int size = storeList.size();
+            ArrayList errorStore = new ArrayList();
+            for (int i = 0; i < size; i++) {
+                RHttpClientSessionStore store = storeList.get(i);
+                if(store.getState() == MyMessage.SessionState.ERROR.getKey()
+                        ||
+                        store.getState() == MyMessage.SessionState.DEAD.getKey()
+                        ||
+                        store.getState() == MyMessage.SessionState.KILL.getKey()
+                        ||
+                        store.getState() == MyMessage.SessionState.SHUTTINGDOWN.getKey()
+                        ){ // 当远程机子状态有问题 的时候就直接删除
+                    errorStore.add(store);
+                }
+            }
+            errorStore.forEach(store -> {
+                storeList.remove(store);
+            });
+
+            // 保证池子数量
+//            valitileAvailable
+
+        }finally {
+            LOCK.unlock();
+        }
+    }
+
+    /**
+     * 模拟使用
+     * @param store
+     */
     private void callMockRemoteAndUpdateState(RHttpClientSessionStore store){
         Random random = new Random();
-        int i = random.nextInt(5); // 0-1 的整数
-        String idlestate = MyMessage.SessionState.IDLE.getKey();
-        String notestartedstate = MyMessage.SessionState.NOTSTARTED.getKey();
+        // 0-5 的整数
+        int i = random.nextInt(5);
+        String idleState = MyMessage.SessionState.IDLE.getKey();
+        String noteStartedState = MyMessage.SessionState.NOTSTARTED.getKey();
         String busy = MyMessage.SessionState.BUSY.getKey();
         String dead = MyMessage.SessionState.DEAD.getKey();
         String error = MyMessage.SessionState.ERROR.getKey();
 
         List<String> stateList = new ArrayList<String>(){{
-            add(idlestate);
-            add(notestartedstate);
+            add(idleState);
+            add(noteStartedState);
             add(busy);
             add(dead);
             add(error);
@@ -143,12 +200,19 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     }
     private void callRemoteAndUpdateState(RHttpClientSessionStore store){
 //        this.connection.get()
+        try {
+            MyMessage.SessionSateResultMessage sessionSateResultMessage = this.connection.get(MyMessage.SessionSateResultMessage.class, MyMessage.SESSION_STATE_URI, store.getSessionid());
 
+        } catch (Exception e){
+
+        }
     }
 
-
-    private void update(RHttpClientSessionStore sessionStore){
-
+    /**
+     *
+     */
+    private void valitileAvailable(){
+//        Executors.newFixedThreadPool()
     }
 
 }

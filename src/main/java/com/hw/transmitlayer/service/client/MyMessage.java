@@ -3,6 +3,7 @@ package com.hw.transmitlayer.service.client;
 import com.hw.transmitlayer.service.client.model.JsonOutput;
 import org.apache.livy.client.common.HttpMessages;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +13,11 @@ import java.util.Map;
  */
 public class MyMessage extends HttpMessages {
     // SESSIONINIT 为创建session时候的其实坐标
-    public final static String SESSIONINIT = "sessions";
+    public final static String SESSIONINIT = "/sessions";
     // 重新建立连接地址 'http://192.168.40.179:8998/sessions/7/connect
     public final static String SESSIONRECONNECT = SESSIONINIT + "/%d/connect";
+    // 重新建立连接地址 'http://192.168.40.179:8998/sessions/7/connect
+    public final static String SESSION_STATE_URI = SESSIONINIT + "/%d/state";
 
     // 获取当前session信息 'http://192.168.40.179:8998/sessions/7
     public final static String SESSIONINITFORMAT = SESSIONINIT + "/%s";
@@ -51,7 +54,11 @@ public class MyMessage extends HttpMessages {
         }
 
         public CreateClientWithTypeEntity(Map<String, String> conf, String kind) {
-            this.conf = conf;
+            if(conf == null){// 这个很重要，不然会出现空指针
+                this.conf = new HashMap<>();
+            }else {
+                this.conf = conf;
+            }
             this.kind = kind;
         }
 

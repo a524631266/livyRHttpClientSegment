@@ -58,7 +58,7 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
                 // 获取的是 sparkr/spark/pyspark
                 String kind = rHttpConf.get("kind");
                 MyMessage.CreateClientWithTypeEntity createClientWithTypeEntity = new MyMessage.CreateClientWithTypeEntity(conf, kind);
-                HttpMessages.SessionInfo result = this.conn.post(createClientWithTypeEntity, HttpMessages.SessionInfo.class, uri.toString());
+                HttpMessages.SessionInfo result = this.conn.post(createClientWithTypeEntity, HttpMessages.SessionInfo.class, MyMessage.SESSIONINIT);
                 int id = result.id;
                 String state = result.state;
                 URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);

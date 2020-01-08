@@ -83,13 +83,24 @@ public class RLivyConnection {
                 }
             }else {
                 String error = EntityUtils.toString(entity);
-                throw new IOException(String.format("%s : %s", result.getStatusLine().getReasonPhrase(), error ));
+                throw new IOException(String.format("远程服务端返回的错误信息,%s : %s", result.getStatusLine().getReasonPhrase(), error ));
             }
 
         }
     }
 
+    /**
+     *
+     * @param returnClass
+     * @param uri MyMessage.
+     * @param uriParams
+     * @param <V>
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     */
     public <V> V get(Class<V> returnClass, String uri,Object... uriParams) throws IOException, URISyntaxException {
-            return sendJsonRequest(null, returnClass, uri, uriParams);
+        HttpGet httpGet = new HttpGet();
+        return sendJsonRequest(httpGet, returnClass, uri, uriParams);
     }
 }

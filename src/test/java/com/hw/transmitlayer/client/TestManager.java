@@ -9,6 +9,7 @@ import org.junit.Test;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Random;
+import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -24,6 +25,20 @@ public class TestManager {
             System.out.println(i1);
         }
     }
+
+    @Test
+    public void testVector(){
+        Vector<String> vector= new Vector<String>(){
+            {
+                add("123");
+                add("234");
+                add("234");
+            }
+        };
+        vector.remove("234");
+        System.out.println(vector.size());
+
+    }
     /*
     * 测试watchDog是否正常工作
      */
@@ -37,7 +52,7 @@ public class TestManager {
         IntStream.rangeClosed(0, 1).forEach(i->{
             new Thread(
                     ()->{
-                        for (int j = 0; j < 100; j++) {
+                        for (int j = 0; j < 10; j++) {
 //                            try {
 //                                TimeUnit.SECONDS.sleep(3);
                             RHttpClientSessionStore availableStore = manager.getAvailableStore();

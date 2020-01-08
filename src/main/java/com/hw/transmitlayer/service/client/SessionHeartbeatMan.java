@@ -15,14 +15,15 @@ public abstract class SessionHeartbeatMan {
             Log.info("start interval to poll session infomation");
             try {
                 while (true) {
-                    TimeUnit.MILLISECONDS.sleep(connect_interval);
                     updateSessionState();
+                    removeUnAvailableSession();
+                    TimeUnit.MILLISECONDS.sleep(connect_interval);
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-    }, "heartbeat-updateSesion");
+    }, "heartbeat-updateSession");
 
     SessionHeartbeatMan(RHttpConf rHttpConf, RLivyConnection connection) {
         connect_interval = rHttpConf.getTimeAsMs(RHttpConf.Entry.CONNECTION_AUTOCONNECT_INTERVAL);
@@ -34,6 +35,10 @@ public abstract class SessionHeartbeatMan {
     /**
      * 定时更新session的状态,确保可用
      */
-    public abstract void updateSessionState();
+    protected abstract void updateSessionState();
 
+    /**
+     * 定时删除无用的session
+     */
+    protected  abstract  void removeUnAvailableSession();
 }
