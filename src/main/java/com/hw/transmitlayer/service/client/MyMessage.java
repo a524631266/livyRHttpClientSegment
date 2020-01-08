@@ -86,4 +86,24 @@ public class MyMessage extends HttpMessages {
         }
 
     }
+    /**
+     * state_url = "http://192.168.40.179:8998/sessions/1/state"
+     */
+    public static class SessionSateResultMessage implements ClientMessage {
+        private final int id;
+        private final String state;
+
+        public SessionSateResultMessage(int id, String state) {
+            this.id = id;
+            this.state = state;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getState() {
+            return state;
+        }
+    }
 }

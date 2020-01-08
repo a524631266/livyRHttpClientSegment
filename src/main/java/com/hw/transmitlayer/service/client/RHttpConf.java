@@ -18,7 +18,8 @@ public class RHttpConf extends ClientConf<RHttpConf> {
         CLIENT_EXECUTOR_NUMS("client.executer.num", 10), // 每个client内部持有可执行的线程数量
         JOB_INITIAL_POLL_INTERVAL("job.initial-poll-interval", "100ms"), // 默认为每100ms获取一次
         JOB_MAX_POLL_INTERVAL("job.max-poll-interval", "5s"), // 每次轮询，以2倍的速度增长
-        CONNECTION_SESSION_KIND("connection.session.kind", "shared");
+        CONNECTION_SESSION_KIND("connection.session.kind", "shared"),
+        CONNECTION_AUTOCONNECT_INTERVAL("connection.autoconnect.interval", "1m");
 
         private final String key;
         private final Object dflt;
@@ -47,7 +48,7 @@ public class RHttpConf extends ClientConf<RHttpConf> {
             = Collections.unmodifiableMap(new HashMap<String, DeprecatedConf>(){{
                 put(RHttpConf.Entry.JOB_INITIAL_POLL_INTERVAL.key,DepConf.JOB_INITIAL_POLL_INTERVAL);
                 put(RHttpConf.Entry.JOB_MAX_POLL_INTERVAL.key,DepConf.JOB_MAX_POLL_INTERVAL);
-                put(RHttpConf.Entry.CONNECTION_SESSION_KIND.key,DepConf.CONNECTION_SESSION_KIND);
+//                put(RHttpConf.Entry.CONNECTION_SESSION_KIND.key,DepConf.CONNECTION_SESSION_KIND);
     }});
 
     private static final Map<String, DeprecatedConf> deprecatedConfigs
@@ -98,18 +99,6 @@ public class RHttpConf extends ClientConf<RHttpConf> {
         public String deprecationMessage() {
             return deprecationMessage;
         }
-    }
-
-    public static void main(String[] args) {
-        Properties properties = new Properties();
-        properties.setProperty(RHttpConf.Entry.JOB_INITIAL_POLL_INTERVAL.key(), String.valueOf(RHttpConf.Entry.JOB_INITIAL_POLL_INTERVAL.dflt()));
-        properties.setProperty(Entry.CONNECTION_SESSION_KIND.key, "sparkr");
-        RHttpConf entries = new RHttpConf(properties);
-        System.out.println(entries.get(Entry.CONNECTION_SESSION_KIND.key));
-        long timeAsMs = entries.getTimeAsMs(RHttpConf.Entry.JOB_INITIAL_POLL_INTERVAL);
-        System.out.println("init poll interval:" + timeAsMs);
-        long timeAsMs1 = entries.getTimeAsMs(RHttpConf.Entry.JOB_MAX_POLL_INTERVAL);
-        System.out.println("max poll interval:" + timeAsMs1);
     }
 
 }

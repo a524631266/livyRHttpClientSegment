@@ -52,7 +52,7 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
                 HttpMessages.SessionInfo sessionInfo = this.conn.post(null, HttpMessages.SessionInfo.class, MyMessage.SESSIONRECONNECT, m.group(1));
                 String state = sessionInfo.state;
                 RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,state, uri_no_path);
-                manager = new RHttpClientSessionStoreManager(sessionStore);
+                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn);
             } else {
                 Map<String,String> conf = null;
                 // 获取的是 sparkr/spark/pyspark
@@ -63,7 +63,7 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
                 String state = result.state;
                 URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
                 RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,state, uri_no_path);
-                manager = new RHttpClientSessionStoreManager(sessionStore);
+                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn);
             }
         } catch (IOException e) {
             propagateErr(e);

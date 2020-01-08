@@ -3,10 +3,10 @@ package com.hw.transmitlayer.service.client;
 import java.net.URI;
 
 /**
- *
+ * state:
  */
 public class RHttpClientSessionStore {
-    private final String state;
+    private String state;
     private final int sessionid;
     private final URI uri_no_path;
     public RHttpClientSessionStore(int sessionid,URI uri_no_path) {
@@ -22,11 +22,14 @@ public class RHttpClientSessionStore {
     public String getState() {
         return state;
     }
-
+    public void setState(String state){
+        this.state = state;
+    }
     public int getSessionid() {
         return sessionid;
     }
     //    public enum State {
 //        INIT,RUNNGING,SHUTDOWN,SECCUCESS;
 //    }
+
 }
