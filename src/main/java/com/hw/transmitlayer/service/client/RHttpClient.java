@@ -1,7 +1,7 @@
 package com.hw.transmitlayer.service.client;
 
-import com.hw.transmitlayer.service.client.handler.RequestJobHandlerImpl;
-import com.hw.transmitlayer.service.client.model.JsonOutput;
+import com.hw.transmitlayer.service.client.handler.RequestStatementJobHandlerImpl;
+
 import org.apache.livy.*;
 import org.apache.livy.client.common.HttpMessages;
 import org.slf4j.Logger;
@@ -152,9 +152,12 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
      */
     @Override
     public JobHandle submitcode(String code) throws IOException, URISyntaxException {
-        HttpMessages.ClientMessage postObject = new MyMessage.ResultWithCode(-1, code, null, 0.0f, null);
-        RequestJobHandlerImpl<MyMessage.ResultWithCode> handler = new RequestJobHandlerImpl<>(conn, executors, storeManager,rHttpConf);
-        handler.start(postObject);
+        MyMessage.StatementCodeSendMessage sendMessage = new MyMessage.StatementCodeSendMessage(code);
+
+        RequestStatementJobHandlerImpl<MyMessage.StatementResultWithCode> handler
+                = new RequestStatementJobHandlerImpl<MyMessage.StatementResultWithCode>(
+                        conn, executors, storeManager,rHttpConf);
+        handler.start(sendMessage);
         return handler;
     }
     private RuntimeException propagateErr(Exception err){

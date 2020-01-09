@@ -43,6 +43,13 @@
             <artifactId>livy-core_2.11</artifactId>
             <version>${livy.version}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.livy/livy-rsc -->
+        <dependency>
+            <groupId>org.apache.livy</groupId>
+            <artifactId>livy-rsc</artifactId>
+            <version>${livy.version}</version>
+        </dependency>
+
         <!--<dependency>-->
             <!--<groupId>org.apache.livy</groupId>-->
             <!--<artifactId>livy-core_2.11</artifactId>-->

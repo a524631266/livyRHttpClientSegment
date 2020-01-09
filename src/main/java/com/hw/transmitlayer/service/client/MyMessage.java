@@ -2,6 +2,7 @@ package com.hw.transmitlayer.service.client;
 
 import com.hw.transmitlayer.service.client.model.JsonOutput;
 import org.apache.livy.client.common.HttpMessages;
+import org.apache.livy.rsc.driver.StatementState;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -23,7 +24,7 @@ public class MyMessage extends HttpMessages {
     // 获取当前session信息 'http://192.168.40.179:8998/sessions/7
     public final static String SESSIONINITFORMAT = SESSIONINIT + "/%s";
     // 提交code片段的地址 'http://192.168.40.179:8998/sessions/7/statements'
-    public final static String CODESTATEMENTFORMAT = SESSIONINIT + "/%s/" + "statements";
+    public final static String CODESTATEMENTFORMAT = SESSIONINIT + "/%d/" + "statements";
 
     // GET请求获取id的地址 'http://192.168.40.179:8998/sessions/7/statements/0'
     public final  static String CODESTATEMENTFORMAT_GET = SESSIONINIT + "/%s/" + "statements" + "/%s";
@@ -70,29 +71,48 @@ public class MyMessage extends HttpMessages {
         }
     }
 
-    public static class PostWithCode implements ClientMessage {
 
+    public static class StatementCodeSendMessage implements ClientMessage {
+        public final String code;
+
+        public StatementCodeSendMessage(String code) {
+            this.code = code;
+        }
     }
 
     /**
      * http://192.168.40.179:8998/sessions/0/statements post 返回的结果
      * http://192.168.40.179:8998/sessions/0/statements/0  get返回的结果
      */
-    public static class ResultWithCode implements ClientMessage {
-        public final int id; // job id -1 为空id
+    public static class StatementResultWithCode implements ClientMessage {
+        public final int id; // StateMentid -1 为空id
         public final String code; // 当前请求的内容
         public final JsonOutput output;
         public final float progress;
-        public final String state;
-
-        public ResultWithCode(int id, String code, JsonOutput output, float progress, String state) {
+//        public final String state;
+        public final StatementState state;
+        public StatementResultWithCode(){
+            this(-1,"",new JsonOutput(){},0.0f,StatementState.Waiting);
+        }
+        public StatementResultWithCode(int id, String code, JsonOutput output, float progress, StatementState state) {
             this.id = id;
             this.code = code;
             this.output = output;
             this.progress = progress;
+
             this.state = state;
         }
 
+        @Override
+        public String toString() {
+            return "StatementResultWithCode{" +
+                    "id=" + id +
+                    ", code='" + code + '\'' +
+                    ", output=" + output +
+                    ", progress=" + progress +
+                    ", state=" + state +
+                    '}';
+        }
     }
     /**
      * state_url = "http://192.168.40.179:8998/sessions/1/state"
