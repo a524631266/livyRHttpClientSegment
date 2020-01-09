@@ -56,9 +56,9 @@ public class TestConnection {
      */
     @Test
     public void testGetState() throws IOException, URISyntaxException {
-        SessionInfo resulst = new SessionInfo(2,null,null,null,null,"starting","sparkr",null,null);
+        SessionInfo resulst = new SessionInfo(3,null,null,null,null,"starting","sparkr",null,null);
         MyMessage.SessionSateResultMessage sessionSateResultMessage = connection.get(MyMessage.SessionSateResultMessage.class, MyMessage.SESSION_STATE_URI, resulst.id);
-        System.out.println(sessionSateResultMessage);
+        System.out.println(sessionSateResultMessage.getState());
     }
 
     /**
@@ -135,16 +135,6 @@ public class TestConnection {
         JsonOutput result2 = result.output;// 当为空的时候无结果
         String status = result2.status; //  成功的话为'ok'
         System.out.println(status);
-    }
-    /**
-     * 同步提交代码片段
-     *
-     * @throws IOException
-     * @throws URISyntaxException
-     */
-    @Test
-    public void testSynchronizedSubmitCodeInfo() throws IOException, URISyntaxException {
-//        new RHttpClient(uri,);
     }
 
     @Test

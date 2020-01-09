@@ -93,7 +93,7 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
     public void start(HttpMessages.ClientMessage message){
         LOCK.lock();// 加锁并休眠,为了使得数据能够正常的获取
         try {
-            // 堵塞吗
+            // 堵塞并休眠获取县官的hu够
             availableStore = storeManager.getAvailableStore();
             MyMessage.StatementResultWithCode result = this.connection.post(message, MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT, availableStore.getSessionid());
             jobId = result.id;

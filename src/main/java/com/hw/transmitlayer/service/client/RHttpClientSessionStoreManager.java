@@ -1,5 +1,6 @@
 package com.hw.transmitlayer.service.client;
 
+import org.apache.livy.client.common.HttpMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,16 +26,21 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
 
     private final AtomicInteger readCount = new AtomicInteger(0) ; // 测试用
 
-    private final int sessionCoreSize ;
-    private final int sessionMaxSize ;
+    private final int sessionCoreSize ; // 最少session数量
+    private final int sessionMaxSize ; // 最大session数量
     private boolean test = false;
 
-
-    public RHttpClientSessionStoreManager( RHttpClientSessionStore storeList,RHttpConf rHttpConf, RLivyConnection connection) {
-        this(storeList, rHttpConf, connection,false);
+    public Lock getLOCK() {
+        return LOCK;
     }
-    public RHttpClientSessionStoreManager( RHttpClientSessionStore storeList,RHttpConf rHttpConf, RLivyConnection connection, Boolean test) {
-        super(rHttpConf, connection);
+
+    public RHttpClientSessionStoreManager(RHttpClientSessionStore storeList, RHttpConf rHttpConf, RLivyConnection connection, RHttpClient rHttpClient) {
+        this(storeList, rHttpConf, connection,rHttpClient,false);
+    }
+
+
+    public RHttpClientSessionStoreManager( RHttpClientSessionStore storeList,RHttpConf rHttpConf, RLivyConnection connection,RHttpClient rHttpClient, Boolean test) {
+        super(rHttpConf, connection,rHttpClient);
         this.test = test;
         this.sessionCoreSize = rHttpConf.getInt(RHttpConf.Entry.CONNECTION_SESSION_CORE_SIZE);
         this.sessionMaxSize = rHttpConf.getInt(RHttpConf.Entry.CONNECTION_SESSION_MAX_SIZE);
@@ -74,13 +80,12 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         try {
             while (true) {
                 LOG.info("当前的sessionstore状态:" + Thread.currentThread().getName());
-                for (RHttpClientSessionStore sessionStore : storeList) {
-
-                    if (sessionStore.getState() == MyMessage.SessionState.IDLE.getKey()) {
-                        store = sessionStore;
-                        break;
-                    }
+                HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
+//                updateSessionStoreList(sessionsInfo);
+                for (HttpMessages.SessionInfo sessionInfo : sessionsInfo) {
+//                    sessionInfo.state;
                 }
+                rHttpClient.getAvaliableSessionInfo();
                 if(store!=null){
                     break;
                 }
@@ -142,13 +147,13 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
             ArrayList errorStore = new ArrayList();
             for (int i = 0; i < size; i++) {
                 RHttpClientSessionStore store = storeList.get(i);
-                if(store.getState() == MyMessage.SessionState.ERROR.getKey()
+                if(store.getState() == MyMessage.SessionState.error
                         ||
-                        store.getState() == MyMessage.SessionState.DEAD.getKey()
+                        store.getState() == MyMessage.SessionState.dead
                         ||
-                        store.getState() == MyMessage.SessionState.KILL.getKey()
+                        store.getState() == MyMessage.SessionState.kill
                         ||
-                        store.getState() == MyMessage.SessionState.SHUTTINGDOWN.getKey()
+                        store.getState() == MyMessage.SessionState.shuttingdown
                         ){ // 当远程机子状态有问题 的时候就直接删除
                     errorStore.add(store);
                 }
@@ -173,42 +178,54 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         Random random = new Random();
         // 0-5 的整数
         int i = random.nextInt(5);
-        String idleState = MyMessage.SessionState.IDLE.getKey();
-        String noteStartedState = MyMessage.SessionState.NOTSTARTED.getKey();
-        String busy = MyMessage.SessionState.BUSY.getKey();
-        String dead = MyMessage.SessionState.DEAD.getKey();
-        String error = MyMessage.SessionState.ERROR.getKey();
+        String idleState = MyMessage.SessionState.idle.toString();
+        String noteStartedState = MyMessage.SessionState.not_started.toString();
+        String busy = MyMessage.SessionState.busy.toString();
+        String dead = MyMessage.SessionState.dead.toString();
+        String error = MyMessage.SessionState.error.toString();
 
-        List<String> stateList = new ArrayList<String>(){{
-            add(idleState);
-            add(noteStartedState);
-            add(busy);
-            add(dead);
-            add(error);
+        List<MyMessage.SessionState> stateList = new ArrayList<MyMessage.SessionState>(){{
+//            add(idleState);
+            add(MyMessage.SessionState.idle);
+//            add(noteStartedState);
+            add(MyMessage.SessionState.not_started);
+//            add(busy);
+            add(MyMessage.SessionState.busy);
+//            add(dead);
+            add(MyMessage.SessionState.dead);
+//            add(error);
+            add(MyMessage.SessionState.error);
         }};
 
         MyMessage.SessionSateResultMessage message
                 = new MyMessage.SessionSateResultMessage(
                         store.getSessionid(), stateList.get(i), "");
-        String state = message.getState();
+        MyMessage.SessionState state = message.getState();
         System.out.println(store.getSessionid() + " from state" + store.getState() +": update to state:" + state);
         store.setState(state);
     }
     private void callRemoteAndUpdateState(RHttpClientSessionStore store){
 //        this.connection.get()
-        try {
-            MyMessage.SessionSateResultMessage sessionSateResultMessage = this.connection.get(MyMessage.SessionSateResultMessage.class, MyMessage.SESSION_STATE_URI, store.getSessionid());
+        HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
 
-        } catch (Exception e){
-
-        }
     }
 
     /**
+     * 获取可用sessionS
      *
      */
-    private void valitileAvailable(){
+    private HttpMessages.SessionInfo[] getSessionsInfo(){
 //        Executors.newFixedThreadPool()
+        // 网络异常或者其他异常
+        HttpMessages.SessionInfo[] sessions = null;
+        try {
+            MyMessage.SessionInfoMessages sessionInfo = this.rHttpClient.getAvaliableSessionInfo();
+            sessions = sessionInfo.getSessions();
+        } catch (Exception e){
+            e.printStackTrace();
+        } finally {
+            return sessions;
+        }
     }
 
 }

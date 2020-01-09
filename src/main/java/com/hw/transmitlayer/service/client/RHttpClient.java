@@ -51,8 +51,8 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
                 URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
                 HttpMessages.SessionInfo sessionInfo = this.conn.post(null, HttpMessages.SessionInfo.class, MyMessage.SESSIONRECONNECT, m.group(1));
                 String state = sessionInfo.state;
-                RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,state, uri_no_path);
-                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn);
+                RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,MyMessage.SessionState.valueOf(state), uri_no_path);
+                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn,this);
             } else {
                 Map<String,String> conf = null;
                 // 获取的是 sparkr/spark/pyspark
@@ -62,8 +62,8 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
                 int id = result.id;
                 String state = result.state;
                 URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
-                RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,state, uri_no_path);
-                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn);
+                RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,MyMessage.SessionState.valueOf(state), uri_no_path);
+                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn, this);
             }
         } catch (IOException e) {
             propagateErr(e);
@@ -171,5 +171,11 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
     // only for testing
     public RHttpClientSessionStoreManager getStoreManager() {
         return storeManager;
+    }
+
+//    public getSessionin
+    public  MyMessage.SessionInfoMessages getAvaliableSessionInfo() throws IOException, URISyntaxException {
+        MyMessage.SessionInfoMessages infoMessages = conn.get(MyMessage.SessionInfoMessages.class, MyMessage.SESSIONINIT);
+        return infoMessages;
     }
 }

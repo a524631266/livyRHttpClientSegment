@@ -9,6 +9,7 @@ public abstract class SessionHeartbeatMan {
     private Logger Log = LoggerFactory.getLogger(this.getClass());
     private final long connect_interval;
     protected final RLivyConnection connection;
+    protected final RHttpClient rHttpClient;
     private Thread thread = new Thread(new Runnable() {
         @Override
         public void run() {
@@ -25,9 +26,10 @@ public abstract class SessionHeartbeatMan {
         }
     }, "heartbeat-updateSession");
 
-    SessionHeartbeatMan(RHttpConf rHttpConf, RLivyConnection connection) {
+    SessionHeartbeatMan(RHttpConf rHttpConf, RLivyConnection connection,RHttpClient rHttpClient) {
         connect_interval = rHttpConf.getTimeAsMs(RHttpConf.Entry.CONNECTION_AUTOCONNECT_INTERVAL);
         this.connection = connection;
+        this.rHttpClient = rHttpClient;
         thread.setDaemon(true);
         thread.start();
     }

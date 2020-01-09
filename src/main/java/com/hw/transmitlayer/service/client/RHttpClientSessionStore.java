@@ -6,23 +6,23 @@ import java.net.URI;
  * state:
  */
 public class RHttpClientSessionStore {
-    private String state;
+    private MyMessage.SessionState state;
     private final int sessionid;
     private final URI uri_no_path;
     public RHttpClientSessionStore(int sessionid,URI uri_no_path) {
-        this(sessionid,MyMessage.SessionState.NOTSTARTED.getKey(),uri_no_path);
+        this(sessionid,MyMessage.SessionState.not_started,uri_no_path);
     }
 
-    public RHttpClientSessionStore(int sessionid, String state, URI uri_no_path) {
+    public RHttpClientSessionStore(int sessionid, MyMessage.SessionState state, URI uri_no_path) {
         this.sessionid = sessionid;
         this.state = state;
         this.uri_no_path = uri_no_path;
     }
 
-    public String getState() {
+    public  MyMessage.SessionState  getState() {
         return state;
     }
-    public void setState(String state){
+    public void setState(MyMessage.SessionState state){
         this.state = state;
     }
     public int getSessionid() {

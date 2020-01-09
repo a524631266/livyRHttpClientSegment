@@ -47,7 +47,7 @@ public class TestManager {
 //        ne
         RHttpConf entries = new TestConfig().testPrepareConfig();
         RLivyConnection connection = null;
-        RHttpClientSessionStoreManager manager = new RHttpClientSessionStoreManager(null, entries,connection, true);
+        RHttpClientSessionStoreManager manager = new RHttpClientSessionStoreManager(null, entries,connection, null,true);
         // 消费者
         IntStream.rangeClosed(0, 1).forEach(i->{
             new Thread(

@@ -3,11 +3,10 @@ package com.hw.transmitlayer.service.client;
 import com.hw.transmitlayer.service.client.model.JsonOutput;
 import org.apache.livy.client.common.HttpMessages;
 import org.apache.livy.rsc.driver.StatementState;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.annotate.JsonValue;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 该类用来传递post中的实体(Entity)信息作用的
@@ -31,16 +30,42 @@ public class MyMessage extends HttpMessages {
 
 
     public enum SessionState{
-        NOTSTARTED("not_started"),STARTING("starting"),RECOVERING("recovering"),
-        IDLE("idle"),RUNNING("running"),BUSY("busy"),SHUTTINGDOWN("shuttingdown")
-        ,KILL("kill"),ERROR("error"),DEAD("dead");
-        private final String key;
+        not_started("not_started"),starting("starting"),recovering("recovering"),
+        idle("idle"),running("running"),busy("busy"),shuttingdown("shuttingdown")
+        ,kill("kill"),error("error"),dead("dead");
+//        @JsonProperty("idle")IDLE,
+
+
+        public final String key;
+        private static final Map<SessionState, List<SessionState>> PREDECESSORS;
 
         SessionState(String key) {
             this.key = key;
         }
-        public String getKey() {
-            return key;
+
+//        public String getKey() {
+//            return key.toLowerCase();
+//        }
+
+        @JsonValue
+        @Override
+        public String toString() {
+            return this.key.toLowerCase();
+        }
+        static void put(SessionState key, Map<SessionState, List<SessionState>> map, SessionState... values) {
+            map.put(key, Collections.unmodifiableList(Arrays.asList(values)));
+        }
+        static {
+            Map<SessionState, List<SessionState>> predecessors = new EnumMap(SessionState.class);
+            put(not_started, predecessors);
+            put(starting, predecessors, not_started);
+            put(recovering, predecessors, starting);
+            put(idle, predecessors, running);
+            put(error, predecessors, running);
+            put(shuttingdown, predecessors, idle);
+            put(dead, predecessors, shuttingdown);
+            put(kill, predecessors, idle,dead);
+            PREDECESSORS = Collections.unmodifiableMap(predecessors);
         }
     }
 
@@ -121,13 +146,13 @@ public class MyMessage extends HttpMessages {
      */
     public static class SessionSateResultMessage implements ClientMessage {
         private final int id;
-        private final String state;
+        private final SessionState state;
         private final String msg;
 
         public SessionSateResultMessage(){
             this(-1,null,null);
         }
-        public SessionSateResultMessage(int id, String state, String msg) {
+        public SessionSateResultMessage(int id, SessionState state, String msg) {
             this.id = id;
             this.state = state;
             this.msg = msg;
@@ -137,7 +162,7 @@ public class MyMessage extends HttpMessages {
             return id;
         }
 
-        public String getState() {
+        public SessionState getState() {
             return state;
         }
     }
