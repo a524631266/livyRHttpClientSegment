@@ -14,6 +14,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.apache.livy.client.common.HttpMessages;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,6 +27,7 @@ import java.net.URISyntaxException;
  * 目前 connection操作分两种，一种是一次连接，另一种是多次轮询方式连接方式获取结果
  */
 public class RLivyConnection {
+    private static Logger LOG = LoggerFactory.getLogger(RLivyConnection.class);
 //    private
 //    static final String INITIL_URL = "/sessions";
     private static final String Application_JSON = "application/json";
@@ -68,10 +71,11 @@ public class RLivyConnection {
                 server.getHost(),
                 server.getPort(),
                 String.format(uri, uriParams),null,null));
+
         if(req instanceof HttpPost || req instanceof HttpGet || req instanceof HttpDelete) {
             req.addHeader("X-Requested-By", "livy");
         }
-
+        LOG.info("request url:" + req.getURI());
         try(CloseableHttpResponse result = client.execute(req)){
             int status = (result.getStatusLine().getStatusCode() / 100) * 100;
             HttpEntity entity = result.getEntity();

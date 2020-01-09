@@ -1,13 +1,9 @@
 package com.hw.transmitlayer.service.client;
 
-import org.apache.livy.sessions.SessionState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.*;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -193,7 +189,7 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
 
         MyMessage.SessionSateResultMessage message
                 = new MyMessage.SessionSateResultMessage(
-                        store.getSessionid(), stateList.get(i));
+                        store.getSessionid(), stateList.get(i), "");
         String state = message.getState();
         System.out.println(store.getSessionid() + " from state" + store.getState() +": update to state:" + state);
         store.setState(state);

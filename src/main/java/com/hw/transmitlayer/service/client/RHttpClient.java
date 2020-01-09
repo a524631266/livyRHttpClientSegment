@@ -147,6 +147,7 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
     /**
      * 其他地方不用传递，这个是最重要的提交片段的地方
      * 返回一个句柄给用户，用户可以对其进行监听使用，方便回调
+     * 处理逻辑暂时不放在这里，用户可以自定义监听器处理结果
      * @param code 代码为
      */
     @Override

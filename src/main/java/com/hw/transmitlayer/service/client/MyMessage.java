@@ -3,6 +3,7 @@ package com.hw.transmitlayer.service.client;
 import com.hw.transmitlayer.service.client.model.JsonOutput;
 import org.apache.livy.client.common.HttpMessages;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,10 +100,15 @@ public class MyMessage extends HttpMessages {
     public static class SessionSateResultMessage implements ClientMessage {
         private final int id;
         private final String state;
+        private final String msg;
 
-        public SessionSateResultMessage(int id, String state) {
+        public SessionSateResultMessage(){
+            this(-1,null,null);
+        }
+        public SessionSateResultMessage(int id, String state, String msg) {
             this.id = id;
             this.state = state;
+            this.msg = msg;
         }
 
         public int getId() {
@@ -111,6 +117,46 @@ public class MyMessage extends HttpMessages {
 
         public String getState() {
             return state;
+        }
+    }
+
+    /**
+     * state_url = "http://192.168.40.179:8998/sessions/1/state"
+     */
+    public static class SessionInfoMessages implements ClientMessage {
+        private final int from; // 开始编号
+        private final SessionInfo[] sessions; // 目前所存在的sessions信息
+        private final int total; // 总数量
+
+        public SessionInfoMessages() {
+            this(0,new SessionInfo[]{},0);
+        }
+
+        public SessionInfoMessages(int from, SessionInfo[] sessions, int total) {
+            this.from = from;
+            this.sessions = sessions;
+            this.total = total;
+        }
+
+        public int getFrom() {
+            return from;
+        }
+
+        public SessionInfo[] getSessions() {
+            return sessions;
+        }
+
+        public int getTotal() {
+            return total;
+        }
+
+        @Override
+        public String toString() {
+            return "SessionInfoMessages{" +
+                    "from=" + from +
+                    ", sessions=" + Arrays.toString(sessions) +
+                    ", total=" + total +
+                    '}';
         }
     }
 }

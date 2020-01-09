@@ -30,6 +30,7 @@ public class TestConnection {
 
     /**
      * 测试创建一个远程客户端
+     * 并返回一个sessioninfo
      */
     @Test
     public void TestCreateRemoteClient() throws URISyntaxException {
@@ -44,10 +45,41 @@ public class TestConnection {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 测试状态结果
+     * @throws IOException
+     * @throws URISyntaxException
+     */
     @Test
     public void testGetState() throws IOException, URISyntaxException {
-        SessionInfo resulst = new SessionInfo(1,null,null,null,null,"starting","sparkr",null,null);
+        SessionInfo resulst = new SessionInfo(2,null,null,null,null,"starting","sparkr",null,null);
         MyMessage.SessionSateResultMessage sessionSateResultMessage = connection.get(MyMessage.SessionSateResultMessage.class, MyMessage.SESSION_STATE_URI, resulst.id);
         System.out.println(sessionSateResultMessage);
+    }
+
+    /**
+     * 测试状态结果
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test
+    public void testSessionInfo() throws IOException, URISyntaxException {
+        MyMessage.SessionInfoMessages infoMessages = connection.get(MyMessage.SessionInfoMessages.class, MyMessage.SESSIONINIT);
+        System.out.println(infoMessages);
+
+    }
+
+
+    /**
+     * 提交代码片段
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test
+    public void testSubmitCodeInfo() throws IOException, URISyntaxException {
+        MyMessage.SessionInfoMessages infoMessages = connection.get(MyMessage.SessionInfoMessages.class, MyMessage.SESSIONINIT);
+        System.out.println(infoMessages);
+
     }
 }
