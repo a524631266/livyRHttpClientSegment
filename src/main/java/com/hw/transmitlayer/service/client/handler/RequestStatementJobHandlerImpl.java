@@ -23,8 +23,8 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
     private final Condition done = LOCK.newCondition();
     private int jobId; // 当前任务处理器处理的jobId
     private RHttpClientSessionStore availableStore;// 当前处理statement处理的状态是否一致
-    private volatile StatementState state; //  服务端当前返回的state信息 初始化的时候是空的
-    private T result;
+    private volatile StatementState statementState; //  服务端当前返回的state信息 初始化的时候是空的
+    private volatile T result;
     private Throwable error;
     private volatile boolean isDone;
     private final long initialPollInterval;
@@ -100,14 +100,20 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
             this.executors.schedule(new JobCodePollTaskLoop(initialPollInterval), initialPollInterval, TimeUnit.MILLISECONDS );
 
         } catch (Exception e) {
-            setResult(null, e, State.FAILED);
+            setResult(null, e, StatementState.Cancelled);
         } finally {
             LOCK.unlock();
         }
     }
 
-    private void setResult(T result,Throwable error, State newState){
-        if(!isDone){
+    /**
+     * 触发回调给listener,只能i被一个线程成功调用
+     * @param result
+     * @param error
+     * @param newState
+     */
+    private void setResult(T result,Throwable error, StatementState newState){
+        if(!isDone){ // 关门
             LOCK.lock();
             try{
                 if(!isDone){
@@ -115,7 +121,7 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
                     this.result = result;
                     this.error = error;
 //                    if(state == State.valueOf())
-                    changeState(newState); // 触发回调任务
+                    transStatementState2JobState(newState);
                 }
             }finally {
                 LOCK.unlock();
@@ -123,6 +129,28 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
 
         }
     }
+
+    /**
+     * 把statement状态转换为job
+     * @param newState
+     */
+    public void transStatementState2JobState(StatementState newState){
+        if(newState.equals(StatementState.Available)){
+            // 因为继承livy中的AbstractJobHandle接口，所以需要对statement就进行转换
+//                        changeState(State.QUEUED);
+            changeState(State.SUCCEEDED);
+        }else if(newState.equals(StatementState.Cancelled)
+                || newState.equals(StatementState.Cancelling)
+                ) {
+            changeState(State.FAILED);
+        } else if(newState.equals(StatementState.Waiting)||
+                newState.equals(StatementState.Running)){
+            changeState(State.FAILED);
+        } else {
+            changeState(State.FAILED);
+        }
+    }
+
 
     public class JobCodePollTaskLoop implements Runnable {
         private long currentInterval;
@@ -136,21 +164,25 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
             try{
                 MyMessage.StatementResultWithCode resultWithCode = connection.get(MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT_GET, availableStore.getSessionid(), jobId);
                 boolean finished = false;
-                if(resultWithCode.progress>=1.0 && resultWithCode.state.equals(StatementState.Available)) {
+                // 当片段返回的进度为1，或者当前状态为Available的时候就是结束
+                if(resultWithCode.progress>=1.0 || resultWithCode.state.equals(StatementState.Available)) {
                     finished = true;
                 }
+                // 没有完成的情况，目前只有waiting的状态的售后
                 if (!finished) {
 //                    if(state!=){
 //                        changeState(resultWithCode.state);
 //                    }
+                    transStatementState2JobState(resultWithCode.state);
                     // 下次执行每次以2的倍数于先前的间隔时间而增加，最高不超过设置的最大间隔时间
                     currentInterval =  Math.min(maxPollInterval,currentInterval * 2);
                     executors.schedule(this, currentInterval, TimeUnit.MILLISECONDS);
                 } else {
-                    setResult((T) resultWithCode, null, State.SUCCEEDED);
+                    setResult((T) resultWithCode.output, null, StatementState.Available);
                 }
             }catch (Exception e){
-                setResult(null, e, State.FAILED);
+                // 出现网络异常
+                setResult(null, e,StatementState.Cancelled);
             }
         }
     }

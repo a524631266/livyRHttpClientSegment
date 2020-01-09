@@ -27,7 +27,8 @@ public class MyMessage extends HttpMessages {
     public final static String CODESTATEMENTFORMAT = SESSIONINIT + "/%d/" + "statements";
 
     // GET请求获取id的地址 'http://192.168.40.179:8998/sessions/7/statements/0'
-    public final  static String CODESTATEMENTFORMAT_GET = SESSIONINIT + "/%s/" + "statements" + "/%s";
+    public final  static String CODESTATEMENTFORMAT_GET = SESSIONINIT + "/%d/" + "statements" + "/%d";
+
 
     public enum SessionState{
         NOTSTARTED("not_started"),STARTING("starting"),RECOVERING("recovering"),
@@ -90,11 +91,12 @@ public class MyMessage extends HttpMessages {
         public final JsonOutput output;
         public final float progress;
 //        public final String state;
-        public final StatementState state;
+        public final StatementState state; // statement片段执行成功或者失败（语法错误）都会返回一个available状态
         public StatementResultWithCode(){
             this(-1,"",new JsonOutput(){},0.0f,StatementState.Waiting);
         }
         public StatementResultWithCode(int id, String code, JsonOutput output, float progress, StatementState state) {
+
             this.id = id;
             this.code = code;
             this.output = output;

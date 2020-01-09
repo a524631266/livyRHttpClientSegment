@@ -1,9 +1,8 @@
 package com.hw.transmitlayer.client;
 
-import com.hw.transmitlayer.service.client.MyMessage;
-import com.hw.transmitlayer.service.client.RHttpConf;
-import com.hw.transmitlayer.service.client.RLivyConnection;
+import com.hw.transmitlayer.service.client.*;
 
+import com.hw.transmitlayer.service.client.model.JsonOutput;
 import org.apache.livy.JobHandle;
 import org.apache.livy.client.common.AbstractJobHandle;
 import org.apache.livy.client.common.HttpMessages;
@@ -76,12 +75,13 @@ public class TestConnection {
 
 
     /**
-     * 提交代码片段
+     * 异步提交代码片段
+     *
      * @throws IOException
      * @throws URISyntaxException
      */
     @Test
-    public void testSubmitCodeInfo() throws IOException, URISyntaxException {
+    public void testAsynchronizedSubmitCodeInfo() throws IOException, URISyntaxException {
 //        StringBuffer code = new StringBuffer();
 //        code.append();
 //        HttpMessages.ClientMessage postObject = new MyMessage.ResultWithCode(-1, code.toString(), null, 0.0f, null);
@@ -91,7 +91,7 @@ public class TestConnection {
 //        JobHandle.State send = AbstractJobHandle.State.valueOf("SEND");
 //        System.out.println(send);
         StringBuffer code = new StringBuffer();
-        code.append("library(featen)")
+        code.append("library(eaten)")
                 .append("\nhistorystatrtime =  as.numeric(as.POSIXct(\"2016/08/04\", format=\"%Y/%m/%d\")) - 30 * 24 * 60* 60")
                 .append("\nhistoryendtime =  as.numeric(as.POSIXct(\"2016/08/04\", format=\"%Y/%m/%d\")) + 7 * 24 * 60* 60")
                 .append("\nentityid = \"108491\"")
@@ -111,32 +111,40 @@ public class TestConnection {
                 .append("\nresult_2_5 <- Feature_2_5(MData,Sensor,stime_ana,etime_ana)")
                 .append("\ncreateOrReplaceTempView(result_2_5 , \"result_2_5\")")
                 .append("\nresult_2_5_df <- as.data.frame(sql(\"select time,result_2_5 from result_2_5\"))")
-                .append("\nas.data.frame(result_2_5)");
+                .append("\ncollect(result_2_5)");
         MyMessage.StatementCodeSendMessage statementCodeSendMessage = new MyMessage.StatementCodeSendMessage(code.toString());
         // 提交code路径
-        MyMessage.StatementResultWithCode result = connection.post(statementCodeSendMessage, MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT, 0);
+        MyMessage.StatementResultWithCode result = connection.post(statementCodeSendMessage, MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT, 1);
         System.out.println(result);
     }
     /**
-     * 提交代码片段
+     * 获取提交的结果
      * @throws IOException
      * @throws URISyntaxException
      */
     @Test
     public void testReturenCodeInfo() throws IOException, URISyntaxException {
-//        StringBuffer code = new StringBuffer();
-//        code.append();
-//        HttpMessages.ClientMessage postObject = new MyMessage.ResultWithCode(-1, code.toString(), null, 0.0f, null);
-//        RequestJobHandlerImpl<MyMessage.ResultWithCode> handler = new RequestJobHandlerImpl<>(conn, executors, storeManager,rHttpConf);
-//        handler.start(postObject);
-//        System.out.println(infoMessages);
-//        JobHandle.State send = AbstractJobHandle.State.valueOf("SEND");
-//        System.out.println(send);
-        StringBuffer code = new StringBuffer();
-        MyMessage.StatementCodeSendMessage statementCodeSendMessage = new MyMessage.StatementCodeSendMessage(code.toString());
-        // 提交code路径
-        MyMessage.StatementResultWithCode result = connection.post(statementCodeSendMessage, MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT, 0);
+
+        // 获取上次的结果
+        // SESSIONID JOBID
+        MyMessage.StatementResultWithCode result = connection.get( MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT_GET, 1,4);
         System.out.println(result);
+        int statementid = result.id; // 当前statement的id
+        float progress = result.progress; // 当前进度 1.0w
+        StatementState state = result.state;
+        JsonOutput result2 = result.output;// 当为空的时候无结果
+        String status = result2.status; //  成功的话为'ok'
+        System.out.println(status);
+    }
+    /**
+     * 同步提交代码片段
+     *
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    @Test
+    public void testSynchronizedSubmitCodeInfo() throws IOException, URISyntaxException {
+//        new RHttpClient(uri,);
     }
 
     @Test
