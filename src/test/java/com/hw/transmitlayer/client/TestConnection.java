@@ -70,7 +70,7 @@ public class TestConnection {
     public void testSessionInfo() throws IOException, URISyntaxException {
         MyMessage.SessionInfoMessages infoMessages = connection.get(MyMessage.SessionInfoMessages.class, MyMessage.SESSIONINIT);
         System.out.println(infoMessages);
-
+        MyMessage.SessionState sessionState = MyMessage.SessionState.valueOf(infoMessages.getSessions()[0].state);
     }
 
 

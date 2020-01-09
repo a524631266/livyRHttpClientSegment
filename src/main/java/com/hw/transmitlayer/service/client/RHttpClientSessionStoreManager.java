@@ -1,6 +1,7 @@
 package com.hw.transmitlayer.service.client;
 
 import org.apache.livy.client.common.HttpMessages;
+import org.apache.livy.rsc.driver.StatementState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     private static Logger LOG = LoggerFactory.getLogger(RHttpClientSessionStoreManager.class);
 //    private final ConcurrentHashMap<Integer, RHttpClientSessionStore> storeMap;
-    private final Vector<RHttpClientSessionStore> storeList = new Vector<>();
+    private final Map<Integer,RHttpClientSessionStore> storeMap= new HashMap<Integer,RHttpClientSessionStore>();
     // 目前读写次数暂时还不太确定
     private final Lock LOCK = new ReentrantLock(true);
     private final Condition done = LOCK.newCondition();
@@ -34,25 +35,25 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         return LOCK;
     }
 
-    public RHttpClientSessionStoreManager(RHttpClientSessionStore storeList, RHttpConf rHttpConf, RLivyConnection connection, RHttpClient rHttpClient) {
-        this(storeList, rHttpConf, connection,rHttpClient,false);
+    public RHttpClientSessionStoreManager(RHttpClientSessionStore store, RHttpConf rHttpConf, RLivyConnection connection, RHttpClient rHttpClient) {
+        this(store, rHttpConf, connection,rHttpClient,false);
     }
 
 
-    public RHttpClientSessionStoreManager( RHttpClientSessionStore storeList,RHttpConf rHttpConf, RLivyConnection connection,RHttpClient rHttpClient, Boolean test) {
+    public RHttpClientSessionStoreManager( RHttpClientSessionStore store,RHttpConf rHttpConf, RLivyConnection connection,RHttpClient rHttpClient, Boolean test) {
         super(rHttpConf, connection,rHttpClient);
         this.test = test;
         this.sessionCoreSize = rHttpConf.getInt(RHttpConf.Entry.CONNECTION_SESSION_CORE_SIZE);
         this.sessionMaxSize = rHttpConf.getInt(RHttpConf.Entry.CONNECTION_SESSION_MAX_SIZE);
-        register(storeList);
+        register(store);
     }
 
-    public void register(RHttpClientSessionStore storeList){
+    public void register(RHttpClientSessionStore store){
         LOCK.lock();
         try {
-            if (storeList != null) {
+            if (store != null) {
                 writeCount.getAndIncrement();
-                this.storeList.add(storeList);
+                this.storeMap.put(store.getSessionid(),store);
                 // 触发并唤醒一个读的线程
                 done.signalAll();
             }
@@ -80,12 +81,11 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         try {
             while (true) {
                 LOG.info("当前的sessionstore状态:" + Thread.currentThread().getName());
-                HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
-//                updateSessionStoreList(sessionsInfo);
-                for (HttpMessages.SessionInfo sessionInfo : sessionsInfo) {
-//                    sessionInfo.state;
-                }
-                rHttpClient.getAvaliableSessionInfo();
+//                HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
+////                updateSessionStoreList(sessionsInfo);
+                // 每次获取数据的时候更新
+                updateSessionState();
+
                 if(store!=null){
                     break;
                 }
@@ -114,7 +114,9 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     }
 
     /**
-     * 周期性更新storeList
+     * 周期性更新storeList,
+     * 1. 不存在的话就删除
+     * 2. 存在的话，就直接跟新任务
      */
     @Override
     public void updateSessionState() {
@@ -122,16 +124,16 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         LOCK.lock();
         try {
             LOG.info("开始执行后台任务：" + test);
-            for (RHttpClientSessionStore store : storeList) {
-                if(test){
-                    // 当前测试使用
+            if(test){
+                // 当前测试使用
+                Collection<RHttpClientSessionStore> values = storeMap.values();
+                for (RHttpClientSessionStore store : values) {
                     callMockRemoteAndUpdateState(store);
-                } else {
-                    // 远程连接
-                    callRemoteAndUpdateState(store);
                 }
+            } else {
+                // 远程连接 并更新状态,并删除无用状态
+                callRemoteAndUpdateStateAndDeleteState();
             }
-            // 获取当前
         } finally {
             LOCK.unlock();
         }
@@ -141,33 +143,30 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     @Override
     protected void removeUnAvailableSession() {
         LOCK.lock();
-        try{
-            LOG.info("开始清理session：" + test);
-            int size = storeList.size();
-            ArrayList errorStore = new ArrayList();
-            for (int i = 0; i < size; i++) {
-                RHttpClientSessionStore store = storeList.get(i);
-                if(store.getState() == MyMessage.SessionState.error
-                        ||
-                        store.getState() == MyMessage.SessionState.dead
-                        ||
-                        store.getState() == MyMessage.SessionState.kill
-                        ||
-                        store.getState() == MyMessage.SessionState.shuttingdown
-                        ){ // 当远程机子状态有问题 的时候就直接删除
-                    errorStore.add(store);
-                }
-            }
-            errorStore.forEach(store -> {
-                storeList.remove(store);
-            });
-
-            // 保证池子数量
-//            valitileAvailable
-
-        }finally {
-            LOCK.unlock();
-        }
+//        try{
+//            LOG.info("开始清理session：" + test);
+//            int size = storeMap.size();
+//            ArrayList errorStore = new ArrayList();
+//            for (int i = 0; i < size; i++) {
+//                RHttpClientSessionStore store = storeList.get(i);
+//                if(store.getState() == MyMessage.SessionState.error
+//                        ||
+//                        store.getState() == MyMessage.SessionState.dead
+//                        ||
+//                        store.getState() == MyMessage.SessionState.kill
+//                        ||
+//                        store.getState() == MyMessage.SessionState.shuttingdown
+//                        ){ // 当远程机子状态有问题 的时候就直接删除
+//                    errorStore.add(store);
+//                }
+//            }
+//
+//            // 保证池子数量
+////            valitileAvailable
+//
+//        }finally {
+//            LOCK.unlock();
+//        }
     }
 
     /**
@@ -204,10 +203,35 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         System.out.println(store.getSessionid() + " from state" + store.getState() +": update to state:" + state);
         store.setState(state);
     }
-    private void callRemoteAndUpdateState(RHttpClientSessionStore store){
+    private void callRemoteAndUpdateStateAndDeleteState(){
 //        this.connection.get()
         HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
+        LOCK.lock();
+        try {
+            // 更新状态
+            Map statemap = new HashMap(){};
+            for (HttpMessages.SessionInfo sessionInfo : sessionsInfo) {
+                String state = sessionInfo.state;
+                MyMessage.SessionState remoteSessionState = MyMessage.SessionState.valueOf(state);
+                int sessionid = sessionInfo.id;
+                statemap.put(sessionid,null);
+                RHttpClientSessionStore localSession = this.storeMap.getOrDefault(sessionid, null);
+                if(localSession!=null && !localSession.getState().equals(remoteSessionState)){
+                    localSession.setState(remoteSessionState);
+                }
+            }
+            // 删除状态
+            Set<Integer> clientSessionIds = this.storeMap.keySet();
 
+            for (Integer sessionId : clientSessionIds) {
+                if(statemap.getOrDefault(sessionId,null) == null){
+                    this.storeMap.remove(sessionId);
+                }
+            }
+
+        }finally {
+            LOCK.unlock();
+        }
     }
 
     /**
