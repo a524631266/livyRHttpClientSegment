@@ -39,7 +39,7 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
 //        this.sessionid = null;
         this.isDone = false; // 初始化是没有做好的
         this.initialPollInterval = rHttpConf.getTimeAsMs(RHttpConf.Entry.JOB_INITIAL_POLL_INTERVAL);
-        long maxPollInterval = rHttpConf.getTimeAsMs(RHttpConf.Entry.JOB_INITIAL_POLL_INTERVAL);
+        long maxPollInterval = rHttpConf.getTimeAsMs(RHttpConf.Entry.JOB_MAX_POLL_INTERVAL);
         if(this.initialPollInterval > maxPollInterval) {
             throw new UnsupportedOperationException("初始间隔时长:"+ initialPollInterval+ "ms > 大于 最大间隔时长:" + maxPollInterval + "ms");
         }
@@ -95,9 +95,12 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
         try {
             // 堵塞并休眠获取县官的hu够
             availableStore = storeManager.getAvailableStore();
-            MyMessage.StatementResultWithCode result = this.connection.post(message, MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT, availableStore.getSessionid());
+            MyMessage.StatementResultWithCode result = this.connection.post(message,
+                    MyMessage.StatementResultWithCode.class,
+                    MyMessage.CODESTATEMENTFORMAT, availableStore.getSessionid());
             jobId = result.id;
-            this.executors.schedule(new JobCodePollTaskLoop(initialPollInterval), initialPollInterval, TimeUnit.MILLISECONDS );
+            this.executors.schedule(new JobCodePollTaskLoop(initialPollInterval),
+                    initialPollInterval, TimeUnit.MILLISECONDS );
 
         } catch (Exception e) {
             setResult(null, e, StatementState.Cancelled);
@@ -143,9 +146,10 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
                 || newState.equals(StatementState.Cancelling)
                 ) {
             changeState(State.FAILED);
-        } else if(newState.equals(StatementState.Waiting)||
-                newState.equals(StatementState.Running)){
-            changeState(State.FAILED);
+        } else if (newState.equals(StatementState.Waiting) ||
+                newState.equals(StatementState.Running)) {
+            // 等待中
+            changeState(State.QUEUED);
         } else {
             changeState(State.FAILED);
         }
@@ -178,10 +182,11 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
                     currentInterval =  Math.min(maxPollInterval,currentInterval * 2);
                     executors.schedule(this, currentInterval, TimeUnit.MILLISECONDS);
                 } else {
-                    setResult((T) resultWithCode.output, null, StatementState.Available);
+                    setResult((T) resultWithCode, null, StatementState.Available);
                 }
             }catch (Exception e){
                 // 出现网络异常
+                e.printStackTrace();
                 setResult(null, e,StatementState.Cancelled);
             }
         }

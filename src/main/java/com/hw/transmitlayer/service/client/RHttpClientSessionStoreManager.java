@@ -5,6 +5,8 @@ import org.apache.livy.rsc.driver.StatementState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,21 +20,27 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     private static Logger LOG = LoggerFactory.getLogger(RHttpClientSessionStoreManager.class);
-//    private final ConcurrentHashMap<Integer, RHttpClientSessionStore> storeMap;
-    private final Map<Integer,RHttpClientSessionStore> storeMap= new HashMap<Integer,RHttpClientSessionStore>();
+
+    private volatile  Map<Integer,RHttpClientSessionStore> storeMap= new HashMap<Integer,RHttpClientSessionStore>();
     // 目前读写次数暂时还不太确定
     private final Lock LOCK = new ReentrantLock(true);
     private final Condition done = LOCK.newCondition();
-    private final AtomicInteger writeCount  = new AtomicInteger(0); // 写入store的次数 测试用
-
-    private final AtomicInteger readCount = new AtomicInteger(0) ; // 测试用
-
-    private final int sessionCoreSize ; // 最少session数量
-    private final int sessionMaxSize ; // 最大session数量
+    // 写入store的次数 测试用
+    private volatile AtomicInteger writeCount = new AtomicInteger(0);
+    // 测试用
+    private volatile AtomicInteger readCount = new AtomicInteger(0) ;
+    // 最少session数量
+    private final int sessionCoreSize ;
+    // 最大session数量
+    private final int sessionMaxSize ;
     private boolean test = false;
 
     public Lock getLOCK() {
         return LOCK;
+    }
+    // 初始化的时候可以设置一个空的store
+    public RHttpClientSessionStoreManager(RHttpConf rHttpConf, RLivyConnection connection, RHttpClient rHttpClient) {
+        this(null, rHttpConf, connection,rHttpClient,false);
     }
 
     public RHttpClientSessionStoreManager(RHttpClientSessionStore store, RHttpConf rHttpConf, RLivyConnection connection, RHttpClient rHttpClient) {
@@ -55,16 +63,9 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
                 writeCount.getAndIncrement();
                 this.storeMap.put(store.getSessionid(),store);
                 // 触发并唤醒一个读的线程
-                done.signalAll();
+//                done.signalAll();
+                done.signal();
             }
-        }finally {
-            LOCK.unlock();
-        }
-    }
-
-    public void remove(RHttpClientSessionStore store) {
-        LOCK.lock();
-        try {
         }finally {
             LOCK.unlock();
         }
@@ -83,23 +84,46 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
                 LOG.info("当前的sessionstore状态:" + Thread.currentThread().getName());
 //                HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
 ////                updateSessionStoreList(sessionsInfo);
-                // 每次获取数据的时候更新
-                updateSessionState();
+                // 每次获取数据的时候更新，这里会不会太耗时
+                balanceSessionState();
+                // 获取一个可用store，如果没有则等待
+                store = this.getOneStore();
 
-                if(store!=null){
+                if(store != null){
                     break;
+                } else {
+                    // 当执行线程的时候后台session不够用，那么就创建一个session
+                    if(storeMap.size() < sessionMaxSize){
+                        this.rHttpClient.createOneRemoteClientAndRegister();
+                    }
                 }
                 LOG.info("循环获取读取的任务列表");
                 // 当前默认最多1秒中，重新唤醒
                 done.await(1, TimeUnit.SECONDS);
             }
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             LOCK.unlock();
             return  store;
         }
     }
+
+    private RHttpClientSessionStore getOneStore() {
+        RHttpClientSessionStore store = null;
+
+        Iterator<Map.Entry<Integer, RHttpClientSessionStore>> entryIterator = storeMap.entrySet().iterator();
+        while (entryIterator.hasNext()){
+            Map.Entry<Integer, RHttpClientSessionStore> storeEntry = entryIterator.next();
+            RHttpClientSessionStore localStore = storeEntry.getValue();
+            if (localStore.getState().equals(MyMessage.SessionState.idle)) {
+                store = localStore;
+                break;
+            }
+        }
+        return store;
+    }
+
 
 //    public int storeSize(){
 //
@@ -119,7 +143,7 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
      * 2. 存在的话，就直接跟新任务
      */
     @Override
-    public void updateSessionState() {
+    public void balanceSessionState() {
         logCount();
         LOCK.lock();
         try {
@@ -134,39 +158,20 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
                 // 远程连接 并更新状态,并删除无用状态
                 callRemoteAndUpdateStateAndDeleteState();
             }
+            // 平衡操作
+            // 当用户远程请求的数据为空的时候，并且用户的当前store数量不足时候，可以增加扩容
+            // 可以支持并发操作
+            if(storeMap.size() < sessionCoreSize) {
+                rHttpClient.createOneRemoteClientAndRegister();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         } finally {
             LOCK.unlock();
         }
 
-    }
-
-    @Override
-    protected void removeUnAvailableSession() {
-        LOCK.lock();
-//        try{
-//            LOG.info("开始清理session：" + test);
-//            int size = storeMap.size();
-//            ArrayList errorStore = new ArrayList();
-//            for (int i = 0; i < size; i++) {
-//                RHttpClientSessionStore store = storeList.get(i);
-//                if(store.getState() == MyMessage.SessionState.error
-//                        ||
-//                        store.getState() == MyMessage.SessionState.dead
-//                        ||
-//                        store.getState() == MyMessage.SessionState.kill
-//                        ||
-//                        store.getState() == MyMessage.SessionState.shuttingdown
-//                        ){ // 当远程机子状态有问题 的时候就直接删除
-//                    errorStore.add(store);
-//                }
-//            }
-//
-//            // 保证池子数量
-////            valitileAvailable
-//
-//        }finally {
-//            LOCK.unlock();
-//        }
     }
 
     /**
@@ -206,36 +211,37 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     private void callRemoteAndUpdateStateAndDeleteState(){
 //        this.connection.get()
         HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
-        LOCK.lock();
-        try {
-            // 更新状态
-            Map statemap = new HashMap(){};
-            for (HttpMessages.SessionInfo sessionInfo : sessionsInfo) {
-                String state = sessionInfo.state;
-                MyMessage.SessionState remoteSessionState = MyMessage.SessionState.valueOf(state);
-                int sessionid = sessionInfo.id;
-                statemap.put(sessionid,null);
-                RHttpClientSessionStore localSession = this.storeMap.getOrDefault(sessionid, null);
-                if(localSession!=null && !localSession.getState().equals(remoteSessionState)){
-                    localSession.setState(remoteSessionState);
-                }
-            }
-            // 删除状态
-            Set<Integer> clientSessionIds = this.storeMap.keySet();
 
-            for (Integer sessionId : clientSessionIds) {
-                if(statemap.getOrDefault(sessionId,null) == null){
-                    this.storeMap.remove(sessionId);
-                }
-            }
+        Map stateMap = new HashMap(sessionsInfo.length){};
+        for (HttpMessages.SessionInfo sessionInfo : sessionsInfo) {
+            String state = sessionInfo.state;
+            MyMessage.SessionState remoteSessionState = MyMessage.SessionState.valueOf(state);
+            int sessionId = sessionInfo.id;
+            stateMap.put(sessionId,1);
+            RHttpClientSessionStore localSession = this.storeMap.getOrDefault(sessionId,null);
 
-        }finally {
-            LOCK.unlock();
+            // 新增状态
+            if(localSession == null ){
+                //添加新增状态 注册 到自身的
+                this.register(
+                        new RHttpClientSessionStore(sessionId,remoteSessionState,rHttpClient.getUri_no_path()));
+            }else if(!localSession.getState().equals(remoteSessionState)){
+                // 更新状态
+                localSession.setState(remoteSessionState);
+            }
+        }
+        // 删除状态
+        Iterator<Integer> iterator = this.storeMap.keySet().iterator();
+        while (iterator.hasNext()){
+            Integer sessionId = iterator.next();
+            if(stateMap.getOrDefault(sessionId,null) == null){
+                this.storeMap.remove(sessionId);
+            }
         }
     }
 
     /**
-     * 获取可用sessionS
+     * 获取可用session信息
      *
      */
     private HttpMessages.SessionInfo[] getSessionsInfo(){
@@ -243,7 +249,7 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         // 网络异常或者其他异常
         HttpMessages.SessionInfo[] sessions = null;
         try {
-            MyMessage.SessionInfoMessages sessionInfo = this.rHttpClient.getAvaliableSessionInfo();
+            MyMessage.SessionInfoMessages sessionInfo = this.rHttpClient.getAvailableSessionInfo();
             sessions = sessionInfo.getSessions();
         } catch (Exception e){
             e.printStackTrace();

@@ -31,7 +31,7 @@ public class MyMessage extends HttpMessages {
 
     public enum SessionState{
         not_started("not_started"),starting("starting"),recovering("recovering"),
-        idle("idle"),running("running"),busy("busy"),shuttingdown("shuttingdown")
+        idle("idle"),running("running"),busy("busy"),shutting_down("shutting_down")
         ,kill("kill"),error("error"),dead("dead");
 //        @JsonProperty("idle")IDLE,
 
@@ -62,8 +62,8 @@ public class MyMessage extends HttpMessages {
             put(recovering, predecessors, starting);
             put(idle, predecessors, running);
             put(error, predecessors, running);
-            put(shuttingdown, predecessors, idle);
-            put(dead, predecessors, shuttingdown);
+            put(shutting_down, predecessors, idle);
+            put(dead, predecessors, shutting_down);
             put(kill, predecessors, idle,dead);
             PREDECESSORS = Collections.unmodifiableMap(predecessors);
         }

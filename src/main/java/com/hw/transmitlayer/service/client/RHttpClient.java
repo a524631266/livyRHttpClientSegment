@@ -21,6 +21,12 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
     private static Logger LOG = LoggerFactory.getLogger(RHttpClient.class);
     private final RLivyConnection conn;
     private final RHttpConf rHttpConf;
+    private final URI uri_no_path;
+
+    public URI getUri_no_path() {
+        return uri_no_path;
+    }
+
     /**
      * 一个执行器，用来执行任务，每个执行者
      */
@@ -29,7 +35,7 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
      * 用来维护一个session，对存活状态的session 发起请求
       */
 //    private final ConcurrentHashMap<Integer, RHttpClientSessionStore> store = new ConcurrentHashMap<>();
-    private final RHttpClientSessionStoreManager storeManager;
+    private  RHttpClientSessionStoreManager storeManager;
     /**
      * 工厂类创建实例对象，并且初始化连接对象
      * 内部之维护一个connection
@@ -44,33 +50,42 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
         this.rHttpConf = rHttpConf;
 
         this.conn = new RLivyConnection(uri, rHttpConf);
-        RHttpClientSessionStoreManager manager = null;
+//        RHttpClientSessionStoreManager manager = null;
+        URI uri_no_path = null;
         try {
+            uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
+
+            storeManager = new RHttpClientSessionStoreManager(rHttpConf,this.conn,this);
             if(m.matches()){
                 int id = Integer.valueOf(m.group(1));
-                URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
                 HttpMessages.SessionInfo sessionInfo = this.conn.post(null, HttpMessages.SessionInfo.class, MyMessage.SESSIONRECONNECT, m.group(1));
                 String state = sessionInfo.state;
                 RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,MyMessage.SessionState.valueOf(state), uri_no_path);
-                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn,this);
+                storeManager.register(sessionStore);
             } else {
                 Map<String,String> conf = null;
-                // 获取的是 sparkr/spark/pyspark
-                String kind = rHttpConf.get("kind");
-                MyMessage.CreateClientWithTypeEntity createClientWithTypeEntity = new MyMessage.CreateClientWithTypeEntity(conf, kind);
-                HttpMessages.SessionInfo result = this.conn.post(createClientWithTypeEntity, HttpMessages.SessionInfo.class, MyMessage.SESSIONINIT);
-                int id = result.id;
-                String state = result.state;
-                URI uri_no_path = new URI(uri.getScheme(),uri.getUserInfo(),uri.getHost(),uri.getPort(),null,null,null);
-                RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id,MyMessage.SessionState.valueOf(state), uri_no_path);
-                manager = new RHttpClientSessionStoreManager(sessionStore,rHttpConf,this.conn, this);
+                // 如果远程数量太多，就直接跳过
+//                int currentRemoteSessionSize = this.getAvailableSessionInfo().getSessions().length;
+//                if(currentRemoteSessionSize < rHttpConf.getInt(RHttpConf.Entry.CONNECTION_SESSION_CORE_SIZE)) {
+//                    // 获取的是 sparkr/spark/pyspark
+//                    String kind = rHttpConf.get(RHttpConf.Entry.CONNECTION_SESSION_KIND);
+//                    MyMessage.CreateClientWithTypeEntity createClientWithTypeEntity = new MyMessage.CreateClientWithTypeEntity(conf, kind);
+//
+//                    HttpMessages.SessionInfo result = this.conn.post(createClientWithTypeEntity, HttpMessages.SessionInfo.class, MyMessage.SESSIONINIT);
+//                    int id = result.id;
+//                    String state = result.state;
+//
+//                    RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(id, MyMessage.SessionState.valueOf(state), uri_no_path);
+//                    storeManager.register(sessionStore);
+//                }
             }
         } catch (IOException e) {
             propagateErr(e);
         } catch (URISyntaxException e) {
             propagateErr(e);
         }finally {
-            this.storeManager = manager;
+//            this.storeManager = manager;
+            this.uri_no_path = uri_no_path;
         }
 //        this.executors = Executors.newFixedThreadPool(rHttpConf.getInt(RHttpConf.Entry.CLIENT_EXECUTOR_NUMS));
         int corePoolSize = rHttpConf.getInt(RHttpConf.Entry.CLIENT_EXECUTOR_NUMS); // 10 个线程
@@ -173,9 +188,40 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
         return storeManager;
     }
 
-//    public getSessionin
-    public  MyMessage.SessionInfoMessages getAvaliableSessionInfo() throws IOException, URISyntaxException {
+    /**
+     * 获取远程的session
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    public  MyMessage.SessionInfoMessages getAvailableSessionInfo() throws IOException, URISyntaxException {
         MyMessage.SessionInfoMessages infoMessages = conn.get(MyMessage.SessionInfoMessages.class, MyMessage.SESSIONINIT);
         return infoMessages;
     }
+
+    /**
+     * 客户端创建一个远程连接
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    public RHttpClientSessionStore createOneRemoteClientAndRegister() throws IOException, URISyntaxException {
+        MyMessage.CreateClientWithTypeEntity createClientWithTypeEntity
+                = new MyMessage.CreateClientWithTypeEntity(null,
+                rHttpConf.get(RHttpConf.Entry.CONNECTION_SESSION_KIND.key()));
+
+        HttpMessages.SessionInfo sessionInfo = conn.post(createClientWithTypeEntity, HttpMessages.SessionInfo.class, MyMessage.SESSIONINIT);
+        String state = sessionInfo.state;
+        int sessionid = sessionInfo.id;
+        RHttpClientSessionStore sessionStore = new RHttpClientSessionStore(sessionid, MyMessage.SessionState.valueOf(state), uri_no_path);
+        storeManager.register(sessionStore);
+        return sessionStore;
+    }
+    /**
+     * 删除一个信息
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+
 }

@@ -16,8 +16,8 @@ public abstract class SessionHeartbeatMan {
             Log.info("start interval to poll session infomation");
             try {
                 while (true) {
-                    updateSessionState();
-                    removeUnAvailableSession();
+                    balanceSessionState();
+//                    removeUnAvailableSession();
                     TimeUnit.MILLISECONDS.sleep(connect_interval);
                 }
             } catch (InterruptedException e) {
@@ -35,12 +35,10 @@ public abstract class SessionHeartbeatMan {
     }
 
     /**
-     * 定时更新session的状态,确保可用
+     * 定时调整平衡session的状态，
+     * 比如删除/更新状态，以确保
      */
-    protected abstract void updateSessionState();
+    protected abstract void balanceSessionState();
 
-    /**
-     * 定时删除无用的session
-     */
-    protected  abstract  void removeUnAvailableSession();
+
 }
