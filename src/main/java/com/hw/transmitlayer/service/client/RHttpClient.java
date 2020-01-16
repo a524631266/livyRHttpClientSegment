@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
@@ -175,6 +177,50 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
         handler.start(sendMessage);
         return handler;
     }
+
+    /**
+     * 其他地方不用传递，这个是最重要的提交片段的地方
+     * 返回一个句柄给用户，用户可以对其进行监听使用，方便回调
+     * 处理逻辑暂时不放在这里，用户可以自定义监听器处理结果
+     * @param code 代码为
+     * @resultObject 用户自定以返回数据类型对象
+     */
+    public JobHandle submitcode(String code,MyMessage.StatementResultWithCode resultObject) throws IOException, URISyntaxException {
+        MyMessage.StatementCodeSendMessage sendMessage = new MyMessage.StatementCodeSendMessage(code);
+
+        RequestStatementJobHandlerImpl<MyMessage.StatementResultWithCode> handler
+                = new RequestStatementJobHandlerImpl<MyMessage.StatementResultWithCode>(
+                conn, executors, storeManager,rHttpConf);
+
+        handler.start(sendMessage, resultObject);
+        return handler;
+    }
+
+    /**
+     * 其他地方不用传递，这个是最重要的提交片段的地方
+     * 返回一个句柄给用户，用户可以对其进行监听使用，方便回调
+     * 处理逻辑暂时不放在这里，用户可以自定义监听器处理结果
+     * @param code 代码为
+     * @resultClass 用户自定以返回数据类型
+     */
+    public <T> JobHandle<T> submitcode(String code,Class<T> resultClass) throws IOException, URISyntaxException {
+        MyMessage.StatementResultWithCode resultObject = null;
+        try {
+            Constructor<T> constructor = resultClass.getConstructor();
+            resultObject = (MyMessage.StatementResultWithCode) constructor.newInstance();
+        } catch (NoSuchMethodException e) {
+            propagateErr(e);
+        } catch (IllegalAccessException e) {
+            propagateErr(e);
+        } catch (InstantiationException e) {
+            propagateErr(e);
+        } catch (InvocationTargetException e) {
+            propagateErr(e);
+        }
+        return submitcode(code, resultObject);
+    }
+
+
     private RuntimeException propagateErr(Exception err){
         if(err instanceof RuntimeException){
             throw (RuntimeException) err;
