@@ -1,5 +1,6 @@
 package com.hw.transmitlayer.config;
 
+import com.hw.transmitlayer.service.client.RHttpConf;
 import org.apache.livy.LivyClient;
 import org.apache.livy.LivyClientBuilder;
 import org.apache.livy.client.common.HttpMessages;
@@ -30,10 +31,11 @@ public class SparkLivyConfig implements DisposableBean {
             // setURI 如果为http：//ip：port，那么就会创建一个新的session
             // 如果是http://ip:port/so.../sessions/1 则会对创建的session进行重新建立
             client = new LivyClientBuilder()
-                    .setConf("livy.rsc.session.kind","sparkr")
-                    .setConf("kind","sparkr")
+                    .setConf(RHttpConf.Entry.CONNECTION_SESSION_KIND.key(),"sparkr")
+//                    .setConf("kind","sparkr")
                     .setURI(new URI("http://" + url))
                     .build();
+            System.out.println("123123");
         } catch (IOException e) {
             e.printStackTrace();
         } catch (URISyntaxException e) {

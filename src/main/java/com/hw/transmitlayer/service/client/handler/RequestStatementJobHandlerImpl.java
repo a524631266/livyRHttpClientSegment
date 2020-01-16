@@ -108,6 +108,29 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
             LOCK.unlock();
         }
     }
+    /**
+     * 传递code片段，以开始轮询方式获取数据，间隔时长为
+     * 提供给用户自定义result内容,传递一个对象，用来读取数
+     * @param message
+     */
+    public void start(HttpMessages.ClientMessage message,MyMessage.StatementResultWithCode resultClass){
+        LOCK.lock();// 加锁并休眠,为了使得数据能够正常的获取
+        try {
+            // 堵塞并休眠获取县官的hu够
+            availableStore = storeManager.getAvailableStore();
+            MyMessage.StatementResultWithCode result = this.connection.post(message,
+                    resultClass.getClass(),
+                    MyMessage.CODESTATEMENTFORMAT, availableStore.getSessionid());
+            jobId = result.id;
+            this.executors.schedule(new JobCodePollTaskLoop(initialPollInterval, resultClass),
+                    initialPollInterval, TimeUnit.MILLISECONDS );
+
+        } catch (Exception e) {
+            setResult(null, e, StatementState.Cancelled);
+        } finally {
+            LOCK.unlock();
+        }
+    }
 
     /**
      * 触发回调给listener,只能i被一个线程成功调用
@@ -116,7 +139,8 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
      * @param newState
      */
     private void setResult(T result,Throwable error, StatementState newState){
-        if(!isDone){ // 关门
+        // 关门
+        if(!isDone){
             LOCK.lock();
             try{
                 if(!isDone){
@@ -158,15 +182,26 @@ public class RequestStatementJobHandlerImpl<T> extends AbstractJobHandle<T> {
 
     public class JobCodePollTaskLoop implements Runnable {
         private long currentInterval;
+        private MyMessage.StatementResultWithCode resultClass;
 
         public JobCodePollTaskLoop(long currentInterval) {
            this.currentInterval = currentInterval;
+        }
+        public JobCodePollTaskLoop(long currentInterval, MyMessage.StatementResultWithCode resultClass){
+            this(currentInterval);
+            this.resultClass = resultClass;
         }
 
         @Override
         public void run() {
             try{
-                MyMessage.StatementResultWithCode resultWithCode = connection.get(MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT_GET, availableStore.getSessionid(), jobId);
+                MyMessage.StatementResultWithCode resultWithCode = null;
+                if(this.resultClass != null) {
+                    resultWithCode = connection.get(this.resultClass.getClass(), MyMessage.CODESTATEMENTFORMAT_GET, availableStore.getSessionid(), jobId);
+                } else{
+                    resultWithCode = connection.get(MyMessage.StatementResultWithCode.class, MyMessage.CODESTATEMENTFORMAT_GET, availableStore.getSessionid(), jobId);
+                }
+
                 boolean finished = false;
                 // 当片段返回的进度为1，或者当前状态为Available的时候就是结束
                 if(resultWithCode.progress>=1.0 || resultWithCode.state.equals(StatementState.Available)) {
