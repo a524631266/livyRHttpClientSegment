@@ -1,6 +1,7 @@
 package com.hw.transmitlayer.service.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.HttpEntity;
@@ -47,6 +48,8 @@ public class RLivyConnection {
         this.client = clientBuilder.build();
         this.server = uri;
         this.mapper = new ObjectMapper();
+        this.mapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY,true);
+        this.mapper.configure(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY,true);
     }
 
     public <V> V post(Object body,  Class<V> returnCLass, String uri, Object... uriParams) throws IOException, URISyntaxException {

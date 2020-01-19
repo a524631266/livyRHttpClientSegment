@@ -132,9 +132,13 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
 
 
     private void logCount() {
-        int writeCountL = writeCount.get();
-        int readCountL = readCount.get();
-        LOG.info("当前 读次数"+ readCountL +": ===== 写次数" + writeCountL );
+        if(writeCount == null || readCount == null) {
+            LOG.info("当前 write read Count还未初始化");
+        }else {
+            int writeCountL = writeCount.get();
+            int readCountL = readCount.get();
+            LOG.info("当前 读次数" + readCountL + ": ===== 写次数" + writeCountL);
+        }
     }
 
     /**
