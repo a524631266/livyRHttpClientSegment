@@ -10,7 +10,8 @@
         <groupId>com.hw.electric</groupId>
         <artifactId>eap</artifactId>
         <version>0.0.1-SNAPSHOT</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath>../pom.xml</relativePath>
+        <!--<relativePath/> &lt;!&ndash; lookup parent from repository &ndash;&gt;-->
     </parent>
     <groupId>com.hw</groupId>
     <artifactId>transmitlayer</artifactId>
@@ -27,11 +28,11 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.hw.electric</groupId>
-            <artifactId>eap</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.hw.electric</groupId>-->
+            <!--<artifactId>eap</artifactId>-->
+            <!--<version>0.0.1-SNAPSHOT</version>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.livy</groupId>
             <artifactId>livy-client-http</artifactId>
