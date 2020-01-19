@@ -1,6 +1,6 @@
-package com.hw.transmitlayer.service.client;
+package com.hw.transmitlayer.client;
 
-import com.hw.transmitlayer.service.client.handler.RequestStatementJobHandlerImpl;
+import com.hw.transmitlayer.client.handler.RequestStatementJobHandlerImpl;
 
 import org.apache.livy.*;
 import org.apache.livy.client.common.HttpMessages;

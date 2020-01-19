@@ -2,18 +2,12 @@ package com.hw.transmitlayer.client;
 
 import com.hw.transmitlayer.service.client.*;
 
-import com.hw.transmitlayer.service.client.model.JsonOutput;
-import org.apache.livy.JobHandle;
-import org.apache.livy.client.common.AbstractJobHandle;
-import org.apache.livy.client.common.HttpMessages;
+import com.hw.transmitlayer.client.model.JsonOutput;
 import org.apache.livy.rsc.driver.StatementState;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 

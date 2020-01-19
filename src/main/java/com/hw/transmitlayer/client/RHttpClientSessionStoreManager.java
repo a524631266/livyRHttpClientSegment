@@ -1,7 +1,6 @@
-package com.hw.transmitlayer.service.client;
+package com.hw.transmitlayer.client;
 
 import org.apache.livy.client.common.HttpMessages;
-import org.apache.livy.rsc.driver.StatementState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

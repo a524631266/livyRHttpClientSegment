@@ -1,4 +1,4 @@
-package com.hw.transmitlayer.service.client;
+package com.hw.transmitlayer.client;
 
 import java.io.IOException;
 import java.net.URISyntaxException;

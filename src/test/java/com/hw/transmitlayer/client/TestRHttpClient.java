@@ -1,23 +1,16 @@
 package com.hw.transmitlayer.client;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Output;
-import com.hw.transmitlayer.service.client.MyMessage;
-import com.hw.transmitlayer.service.client.MyMessage.StatementResultWithCode;
-import com.hw.transmitlayer.service.client.RHttpClient;
-import com.hw.transmitlayer.service.client.RHttpConf;
-import com.hw.transmitlayer.service.client.model.JsonOutput;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hw.transmitlayer.client.MyMessage.StatementResultWithCode;
 import org.apache.livy.JobHandle;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class TestRHttpClient {
@@ -26,8 +19,8 @@ public class TestRHttpClient {
 
     @Before
     public void init() throws URISyntaxException {
-//        uri = new URI("http://192.168.40.179:8998");
-        uri = new URI("http://192.168.10.63:8998");
+        uri = new URI("http://192.168.40.179:8998");
+//        uri = new URI("http://192.168.10.63:8998");
         properties = new Properties();
         // 创建一个sparkr属性
         properties.setProperty(RHttpConf.Entry.CONNECTION_SESSION_KIND.key(),"sparkr");
@@ -57,7 +50,8 @@ public class TestRHttpClient {
                 .append("\nsensorname = \"IC\"")
                 .append("\nresult_2_5 <- Feature_2_5(MData,Sensor,stime_ana,etime_ana)")
                 .append("\ncreateOrReplaceTempView(result_2_5, \"result_2_5\")")
-                .append("\nreturn(toJSON(collect(toJSON(sql(\"select time,result_2_5 from result_2_5\")))))");
+                .append("\nresult<-toJSON(collect(sql(\"select time,result_2_5 as result from result_2_5\")))")
+                .append("\nreturn(result)");
 //                .append("\nreturn(collect(toJSON(result_2_5)))");
         JobHandle submitcode = rHttpClient.submitcode(code.toString());
         submitcode.addListener(new JobHandle.Listener<StatementResultWithCode>() {
@@ -86,12 +80,19 @@ public class TestRHttpClient {
                 System.out.println(statementResultWithCode.id);
                 System.out.println(statementResultWithCode.progress);
                 System.out.println(statementResultWithCode.state);
+//                try {
+//                    Output output = new Output(new FileOutputStream("data/person.bin"));
+//                    Kryo kryo = new Kryo();
+//                    kryo.register(StatementResultWithCode.class);
+//                    kryo.writeObject(output,statementResultWithCode);
+//                } catch (FileNotFoundException e) {
+//                    e.printStackTrace();
+//                }
+                String result = statementResultWithCode.output.data.get("text/plain");
                 try {
-                    Output output = new Output(new FileOutputStream("data/person.bin"));
-                    Kryo kryo = new Kryo();
-                    kryo.register(StatementResultWithCode.class);
-                    kryo.writeObject(output,statementResultWithCode);
-                } catch (FileNotFoundException e) {
+                    ResultClass[] resultClasses = new ObjectMapper().readValue(result, ResultClass[].class);
+                    System.out.println(resultClasses);
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
                 System.out.println(statementResultWithCode.state);
@@ -106,6 +107,7 @@ public class TestRHttpClient {
         RHttpClient rHttpClient = new RHttpClient(uri, new RHttpConf(properties));
         StringBuffer code = new StringBuffer();
         code.append("library(featen)")
+                .append("\nlibrary(jsonlite)")
                 .append("\nan_start = \"2019/11/14\"")
                 .append("\nhistorystatrtime =  as.numeric(as.POSIXct(an_start, format=\"%Y/%m/%d\")) - 30 * 24 * 60* 60")
                 .append("\nhistoryendtime =  as.numeric(as.POSIXct(an_start, format=\"%Y/%m/%d\")) + 7 * 24 * 60* 60")
@@ -125,7 +127,8 @@ public class TestRHttpClient {
                 .append("\nsensorname = \"IC\"")
                 .append("\nresult_2_5 <- Feature_2_5(MData,Sensor,stime_ana,etime_ana)")
                 .append("\ncreateOrReplaceTempView(result_2_5, \"result_2_5\")")
-                .append("\nreturn(collect(toJSON(sql(\"select time,result_2_5 from result_2_5\"))))");
+                .append("\nresult<-toJSON(collect(sql(\"select time,result_2_5 from result_2_5\")))")
+                .append("\nreturn(result)");
         JobHandle submitcode = rHttpClient.submitcode(code.toString(),ClientResultClass.class);
         submitcode.addListener(new JobHandle.Listener<ClientResultClass>() {
             @Override
@@ -159,21 +162,39 @@ public class TestRHttpClient {
 
         TimeUnit.SECONDS.sleep(200000);
     }
-    static class ResultClass {
-        public final long time;
-        public final boolean result_2_5;
+    public static class ResultClass{
+        public long time;
+        public int result;
+//        public ResultClass(){
+//            this(0,0);
+//        }
+//        public ResultClass(long time, int result) {
+//            this.time = time;
+//            this.result = result;
+//        }
+    }
+    public static class ResultJsonClass{
+        @JsonProperty
+        public Map<String, ResultClass[]> data;
+//        public ResultJsonClass(){
+//
+//        }
+////        public void setData(Map<String, List> data) {
+////            this.data = data;
+////        }
 
-        ResultClass(long time, boolean result_2_5) {
-            this.time = time;
-            this.result_2_5 = result_2_5;
-        }
+        public int execution_count; // 0
+        public String status;// 'OK'
+        public String ename;
+        public String evalue;
+        public List traceback;
     }
     public static class ClientResultClass extends MyMessage.StatementResultWithCode{
-        public final Map<String, ResultClass[]> output;
+        public final ResultJsonClass output;
         public ClientResultClass() {
             this(null);
         }
-        public ClientResultClass(Map<String,ResultClass[]> output) {
+        public ClientResultClass(ResultJsonClass output) {
             this.output = output;
         }
     }

@@ -1,9 +1,7 @@
-package com.hw.transmitlayer.service.client;
+package com.hw.transmitlayer.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpStatus;
@@ -14,7 +12,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
-import org.apache.livy.client.common.HttpMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
