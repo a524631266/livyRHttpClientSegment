@@ -1,6 +1,6 @@
 package com.hw.transmitlayer.client;
 
-import com.hw.transmitlayer.service.client.*;
+import com.hw.transmitlayer.client.*;
 
 import com.hw.transmitlayer.client.model.JsonOutput;
 import org.apache.livy.rsc.driver.StatementState;

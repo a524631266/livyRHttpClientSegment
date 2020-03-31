@@ -3,7 +3,7 @@ package com.hw.transmitlayer.client;
 import com.hw.transmitlayer.client.model.JsonOutput;
 import org.apache.livy.client.common.HttpMessages;
 import org.apache.livy.rsc.driver.StatementState;
-import org.codehaus.jackson.annotate.JsonValue;
+import org.apache.livy.shaded.jackson.annotation.JsonValue;
 
 import java.util.*;
 
