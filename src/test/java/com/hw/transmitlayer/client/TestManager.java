@@ -1,9 +1,5 @@
 package com.hw.transmitlayer.client;
 
-import com.hw.transmitlayer.service.client.RHttpClientSessionStore;
-import com.hw.transmitlayer.service.client.RHttpClientSessionStoreManager;
-import com.hw.transmitlayer.service.client.RHttpConf;
-import com.hw.transmitlayer.service.client.RLivyConnection;
 import org.junit.Test;
 
 import java.net.URI;

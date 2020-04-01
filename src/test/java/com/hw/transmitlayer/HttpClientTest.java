@@ -1,15 +1,13 @@
 package com.hw.transmitlayer;
 
-import com.hw.transmitlayer.service.client.RHttpClient;
-import com.hw.transmitlayer.service.client.RHttpConf;
+import com.hw.transmitlayer.client.RHttpClient;
+import com.hw.transmitlayer.client.RHttpConf;
 import org.apache.livy.JobHandle;
-import org.apache.livy.sessions.Kind;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Properties;
-import java.util.concurrent.Future;
 
 public class HttpClientTest {
     public static void main(String[] args) throws URISyntaxException {

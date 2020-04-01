@@ -1,4 +1,4 @@
-package com.hw.transmitlayer.service.client;
+package com.hw.transmitlayer.client;
 
 import org.apache.livy.LivyClient;
 import org.apache.livy.LivyClientFactory;

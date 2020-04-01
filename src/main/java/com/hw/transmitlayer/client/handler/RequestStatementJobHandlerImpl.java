@@ -1,14 +1,11 @@
-package com.hw.transmitlayer.service.client.handler;
+package com.hw.transmitlayer.client.handler;
 
-import com.hw.transmitlayer.service.client.*;
+import com.hw.transmitlayer.client.*;
+
 import org.apache.livy.client.common.AbstractJobHandle;
 import org.apache.livy.client.common.HttpMessages;
 import org.apache.livy.rsc.driver.StatementState;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;

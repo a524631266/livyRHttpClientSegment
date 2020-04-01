@@ -1,4 +1,4 @@
-package com.hw.transmitlayer.service.client.model;
+package com.hw.transmitlayer.client.model;
 
 import java.util.List;
 import java.util.Map;

@@ -2,21 +2,29 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <!--<parent>-->
+       <!--&lt;!&ndash; <groupId>org.springframework.boot</groupId>-->
+        <!--<artifactId>spring-boot-starter-parent</artifactId>-->
+        <!--<version>2.2.1.RELEASE</version>-->
+        <!--<relativePath/>&ndash;&gt; &lt;!&ndash; lookup parent from repository &ndash;&gt;-->
+        <!--<groupId>com.hw.electric</groupId>-->
+        <!--<artifactId>eap</artifactId>-->
+        <!--<version>0.0.1-SNAPSHOT</version>-->
+        <!--<relativePath>../pom.xml</relativePath>-->
+        <!--&lt;!&ndash;<relativePath/> &lt;!&ndash; lookup parent from repository &ndash;&gt;&ndash;&gt;-->
+    <!--</parent>-->
     <parent>
-       <!-- <groupId>org.springframework.boot</groupId>
+        <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.2.1.RELEASE</version>
-        <relativePath/>--> <!-- lookup parent from repository -->
-        <groupId>com.hw.electric</groupId>
-        <artifactId>eap</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <version>2.1.1.RELEASE</version>
+        <relativePath/>
     </parent>
     <groupId>com.hw</groupId>
     <artifactId>transmitlayer</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>transmitlayer</name>
-    <description>transmit the request to 2 computing layer, one is to featen service by renlili, the other is for
+    <description>
+        transmit the request to 2 computing layer, one is to featen service by renlili, the other is for
         deeplearning layers
     </description>
 
@@ -28,10 +36,26 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.hw.electric</groupId>
-            <artifactId>eap</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.5</version>
+        </dependency>
+        <dependency>
+            <groupId>net.sf.json-lib</groupId>
+            <artifactId>json-lib</artifactId>
+            <classifier>jdk15</classifier>
+            <version>2.2.3</version>
+        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.hw.electric</groupId>-->
+            <!--<artifactId>eap</artifactId>-->
+            <!--<version>0.0.1-SNAPSHOT</version>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.livy</groupId>
             <artifactId>livy-client-http</artifactId>
@@ -84,10 +108,22 @@
                 </exclusion>
             </exclusions>
         </dependency>-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+
             <!--<plugin>-->
                 <!--<groupId>org.scala-tools</groupId>-->
                 <!--<artifactId>maven-scala-plugin</artifactId>-->

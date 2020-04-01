@@ -1,1 +1,1 @@
-com.hw.transmitlayer.service.client.RHttpClientFactory
+com.hw.transmitlayer.client.RHttpClientFactory
