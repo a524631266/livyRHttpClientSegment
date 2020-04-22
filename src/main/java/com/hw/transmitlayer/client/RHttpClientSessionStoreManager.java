@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 管理session store用的，同时
@@ -91,14 +93,16 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
                 if(store != null){
                     break;
                 } else {
+
                     // 当执行线程的时候后台session不够用，那么就创建一个session
                     if(storeMap.size() < sessionMaxSize){
                         this.rHttpClient.createOneRemoteClientAndRegister();
                     }
+                    LOG.info("无空用节点循环获取读取的任务列表");
                 }
-                LOG.info("循环获取读取的任务列表");
                 // 当前默认最多1秒中，重新唤醒
                 done.await(1, TimeUnit.SECONDS);
+
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -108,6 +112,10 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         }
     }
 
+    /**
+     *  当返回为空的时候为没有可用的store，因此需要重新布置
+     * @return
+     */
     private RHttpClientSessionStore getOneStore() {
         RHttpClientSessionStore store = null;
 
@@ -151,6 +159,7 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         LOCK.lock();
         try {
             LOG.info("开始执行后台任务：" + test);
+            // 这个部分可以单独成立一个 用来测试的remote更新状态以及实际的远程状态，可以方便
             if(test){
                 // 当前测试使用
                 Collection<RHttpClientSessionStore> values = storeMap.values();
@@ -164,7 +173,11 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
             // 平衡操作
             // 当用户远程请求的数据为空的时候，并且用户的当前store数量不足时候，可以增加扩容
             // 可以支持并发操作
-            if(storeMap.size() < sessionCoreSize) {
+            int noDeadSize = storeMap.values().stream()
+                    .filter((i) -> i.getState() != MyMessage.SessionState.dead)
+                    .collect(Collectors.toList())
+                    .size();
+            if(noDeadSize < sessionCoreSize) {
                 rHttpClient.createOneRemoteClientAndRegister();
             }
         } catch (IOException e) {
@@ -214,7 +227,10 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
     private void callRemoteAndUpdateStateAndDeleteState(){
 //        this.connection.get()
         HttpMessages.SessionInfo[] sessionsInfo = getSessionsInfo();
-
+        if(sessionsInfo == null) {
+            LOG.warn("has no remote livy server ");
+            return;
+        }
         Map stateMap = new HashMap(sessionsInfo.length){};
         for (HttpMessages.SessionInfo sessionInfo : sessionsInfo) {
             String state = sessionInfo.state;
@@ -238,7 +254,9 @@ public class RHttpClientSessionStoreManager extends SessionHeartbeatMan{
         while (iterator.hasNext()){
             Integer sessionId = iterator.next();
             if(stateMap.getOrDefault(sessionId,null) == null){
-                this.storeMap.remove(sessionId);
+//                this.storeMap.remove(sessionId);
+                // x修复ConcurrentModificationException
+                iterator.remove();
             }
         }
     }

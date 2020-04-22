@@ -10,12 +10,13 @@ public abstract class SessionHeartbeatMan {
     private final long connect_interval;
     protected final RLivyConnection connection;
     protected final RHttpClient rHttpClient;
+
     private Thread thread = new Thread(new Runnable() {
         @Override
         public void run() {
             Log.info("start interval to poll session infomation");
             try {
-                while (true) {
+                while (true && (!Thread.currentThread().isInterrupted())) {
                     balanceSessionState();
 //                    removeUnAvailableSession();
                     TimeUnit.MILLISECONDS.sleep(connect_interval);
@@ -23,6 +24,7 @@ public abstract class SessionHeartbeatMan {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            Log.info("end SessionHeatbeatMan!!");
         }
     }, "heartbeat-updateSession");
 
@@ -40,5 +42,10 @@ public abstract class SessionHeartbeatMan {
      */
     protected abstract void balanceSessionState();
 
-
+    /**
+     * 释放资源
+     */
+    public void interrupt(){
+        this.thread.interrupt();
+    };
 }

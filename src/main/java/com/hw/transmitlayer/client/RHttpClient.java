@@ -137,7 +137,15 @@ public class RHttpClient implements LivyClient, RHttpHandlerInterface {
 
     }
 
-    @Deprecated
+    /**
+     * 释放资源
+     * 目前有一个storeMannager
+     */
+    public void close(){
+        this.storeManager.interrupt();
+    }
+
+  @Deprecated
     @Override
     public Future<?> uploadJar(File file) {
         return null;
